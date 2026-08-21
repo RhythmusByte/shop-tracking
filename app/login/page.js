@@ -30,10 +30,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <form onSubmit={handleSubmit} className="card w-full max-w-sm">
-        <h1 className="text-lg font-semibold text-slate-800 mb-1">Store Tracker</h1>
-        <p className="text-sm text-slate-500 mb-5">Admin access only.</p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <form onSubmit={handleSubmit} className="card card-glow w-full max-w-sm animate-fade-in">
+        <h1 className="text-2xl font-semibold text-white mb-1">Store Tracker</h1>
+        <p className="text-sm text-purple-100/70 mb-5">Admin access only.</p>
 
         <div className="mb-3">
           <label className="label">Username</label>

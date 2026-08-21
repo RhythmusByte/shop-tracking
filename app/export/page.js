@@ -14,6 +14,7 @@ const COLUMNS = [
   ["storeName", "Store"],
   ["storeCode", "Code"],
   ["onlineSales", "Online Sales"],
+  ["offlineSales", "Offline Sales"],
   ["cashSales", "Cash"],
   ["upiSales", "UPI"],
   ["cardSales", "Card"],
@@ -30,6 +31,7 @@ const COLUMNS = [
   ["stockLeftNotes", "Stock Left Notes"],
   ["bankStatementChecked", "Bank Statement Checked"],
   ["bankCreditedBy12PM", "Credited By 12PM"],
+  ["fmoAccountAmount", "FMO Account Amount"],
   ["damagesChecked", "Damages Checked"],
   ["damagesFound", "Damages Found"],
   ["damagesNotes", "Damages Notes"],
@@ -117,10 +119,10 @@ export default function ExportPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold text-slate-800 mb-5">Export to spreadsheet</h1>
+      <h1 className="text-3xl font-semibold text-white mb-5">Export to spreadsheet</h1>
 
-      <div className="card mb-6">
-        <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="card card-glow mb-6 animate-fade-in">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div>
             <label className="label">From</label>
             <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -141,7 +143,7 @@ export default function ExportPage() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card animate-fade-in">
         <h3 className="text-sm font-semibold text-slate-700 mb-3">Export a single store</h3>
         <div className="space-y-2">
           {stores.map((s) => (

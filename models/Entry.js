@@ -6,7 +6,9 @@ const EntrySchema = new mongoose.Schema(
     date: { type: String, required: true }, // "YYYY-MM-DD", one entry per store per date
 
     // Sales, broken down by payment method. Total is computed (not stored) from these.
+    // online/offline are order counts, not money values.
     onlineSales: { type: Number, default: 0 },
+    offlineSales: { type: Number, default: 0 },
     cashSales: { type: Number, default: 0 },
     upiSales: { type: Number, default: 0 },
     cardSales: { type: Number, default: 0 },
@@ -35,6 +37,7 @@ const EntrySchema = new mongoose.Schema(
     // Bank statement / deposit
     bankStatementChecked: { type: Boolean, default: false },
     bankCreditedBy12PM: { type: Boolean, default: false },
+    fmoAccountAmount: { type: String, default: "" },
 
     // Damages
     damagesChecked: { type: Boolean, default: false },

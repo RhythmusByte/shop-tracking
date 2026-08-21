@@ -76,9 +76,15 @@ export default function StoresPage() {
     load();
   }
 
+  function whatsappUrl(contact) {
+    const digits = (contact || "").replace(/\D/g, "");
+    if (!digits) return "";
+    return `https://wa.me/${digits.length === 10 ? `91${digits}` : digits}`;
+  }
+
   return (
     <div className="max-w-3xl">
-      <h1 className="text-xl font-semibold text-slate-800 mb-5">Stores</h1>
+      <h1 className="text-3xl font-semibold text-white mb-5">Stores</h1>
 
       <form onSubmit={addStore} className="card mb-6">
         <h3 className="text-sm font-semibold text-slate-700 mb-3">Add a store</h3>
@@ -121,7 +127,7 @@ export default function StoresPage() {
       ) : (
         <div className="space-y-3">
           {stores.map((s) => (
-            <div key={s._id} className="card">
+            <div key={s._id} className="card animate-fade-in">
               {editingId === s._id ? (
                 <div>
                   <div className="grid grid-cols-2 gap-3 mb-3">
@@ -162,7 +168,7 @@ export default function StoresPage() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-800">
                       {s.name} <span className="text-slate-400 font-normal">({s.code})</span>
@@ -172,6 +178,16 @@ export default function StoresPage() {
                       {s.managerName && <p>Manager: {s.managerName} {s.managerContact && `· ${s.managerContact}`}</p>}
                       {s.expectedOpeningTime && <p>Expected open: {s.expectedOpeningTime}</p>}
                     </div>
+                    {whatsappUrl(s.managerContact) && (
+                      <a
+                        href={whatsappUrl(s.managerContact)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex mt-3 text-xs text-brand-600 hover:underline"
+                      >
+                        Open WhatsApp
+                      </a>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => startEdit(s)} className="text-xs text-brand-600 hover:underline">
