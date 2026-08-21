@@ -5,6 +5,31 @@ import Link from "next/link";
 import { todayStr, yesterdayStr } from "@/lib/date";
 import { totalSales, openingStatus, OPENING_STATUS_LABEL, OPENING_STATUS_COLOR } from "@/lib/calc";
 
+/**************************/
+/**
+ * Dashboard page component.
+ *
+ * This component displays a summary of the day's operations
+ * across all four stores. It displays yesterday's total sales,
+ * today's total sales and expense for each store, and
+ * the completeness percentage of today's checklist for each store.
+ *
+ * It also displays the opening status of each store based on
+ * whether the store has logged its opening time, ad start
+ * time, and stock-in time.
+ *
+ * The component fetches the list of active stores, today's
+ * entries, and yesterday's entries on mount, and stores the
+ * data in the component's state.
+ *
+ * The component renders a card for each store, displaying the
+ * store's name, code, and completeness percentage of today's
+ * checklist. It also renders a grid displaying yesterday's
+ * total sales, today's total sales and expense, and the opening
+ * status of each store.
+ */
+/**************/
+
 export default function DashboardPage() {
   const [stores, setStores] = useState([]);
   const [entries, setEntries] = useState([]);
