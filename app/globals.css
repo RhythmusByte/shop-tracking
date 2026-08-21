@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-slate-200 p-5;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors;
+}
+
+.btn-primary {
+  @apply btn bg-brand-600 text-white hover:bg-brand-700;
+}
+
+.btn-secondary {
+  @apply btn bg-slate-100 text-slate-700 hover:bg-slate-200;
+}
+
+.input {
+  @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
+}
+
+.label {
+  @apply block text-sm font-medium text-slate-600 mb-1;
+}
+
+.checkbox-row {
+  @apply flex items-center gap-2 py-1;
+}
