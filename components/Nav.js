@@ -33,6 +33,7 @@ export default function Nav() {
           <span className="font-semibold text-slate-800 mr-4">Store Tracker</span>
           {link("/", "Dashboard")}
           {link("/todo", "Today's TODO")}
+          {link("/pnl", "P&L")}
           {link("/export", "Export")}
           {link("/stores", "Stores")}
         </div>

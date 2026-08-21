@@ -5,14 +5,21 @@ const EntrySchema = new mongoose.Schema(
     store: { type: mongoose.Schema.Types.ObjectId, ref: "Store", required: true },
     date: { type: String, required: true }, // "YYYY-MM-DD", one entry per store per date
 
-    // Sales
+    // Sales, broken down by payment method. Total is computed (not stored) from these.
     onlineSales: { type: Number, default: 0 },
-    offlineSales: { type: Number, default: 0 },
+    cashSales: { type: Number, default: 0 },
+    upiSales: { type: Number, default: 0 },
+    cardSales: { type: Number, default: 0 },
+    creditSales: { type: Number, default: 0 },
 
-    // Ads (must start at 6 AM)
+    // Expenses for the day (cash spent on-site: petty cash, local purchases, etc.)
+    totalExpense: { type: Number, default: 0 },
+
+    // Ads (must start at 6 AM). adConversions is a COUNT of orders attributed to the
+    // ad, not a currency amount.
     adStartTime: { type: String, default: "" }, // "HH:MM"
     adStartedOnTime: { type: Boolean, default: false },
-    adSalesConverted: { type: Number, default: 0 }, // how much of online sales came via the ad
+    adConversions: { type: Number, default: 0 },
 
     // Opening
     openingTime: { type: String, default: "" }, // "HH:MM"

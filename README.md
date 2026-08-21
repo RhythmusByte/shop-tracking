@@ -5,18 +5,21 @@ Stack: Next.js (React + API routes) + Tailwind CSS + MongoDB (Mongoose) + Vercel
 
 ## What it does
 
-- **Dashboard**: today's checklist completeness per store, quick sales snapshot.
+- **Dashboard**: today's checklist completeness per store, opening-time status (on time / late / not logged), and yesterday's total sales per store.
 - **Store entry page**: logs everything per store per day:
-  - Online / offline sales
-  - Ad start time (target 6 AM) and ad-attributed sales
-  - Opening time
+  - Sales broken down by payment method: online, cash, UPI, card, credit (total is computed)
+  - Total expense for the day
+  - Ad start time (target 6 AM) and ad conversion **count** (number of orders, not an amount)
+  - Opening time (compared against the store's expected opening time to flag late/on-time/not-logged)
   - Stock received time + notes
   - Stock left, checked next morning
   - Previous day's bank statement checked + credited by 12 PM
   - Damages checked / found + notes
   - Store called + money deposited confirmation
-- **Today's TODO**: the 3 global daily checks (called stores, checked sales, confirmed deposit).
-- **Stores page**: add your 4 stores manually, deactivate if one closes (data is kept).
+  - Purchases logged against that store/date (description, amount, vendor), running total shown
+- **Today's TODO**: the 3 global daily checks, an auto-generated "Called <store>" task per active store, and a free-form task list you can add to and optionally assign to a store or a person.
+- **P&L Generator**: pick a store and date range, get total sales minus purchases minus expenses, with a spreadsheet export (summary + daily sales + purchases, each on its own tab).
+- **Stores page**: add stores, edit name/code/store number/manager name & contact/expected opening & stock-check time, deactivate if one closes (history is kept, not deleted).
 - **Export**: client-side spreadsheet generation for a date range, either:
   - one combined sheet, all stores
   - one workbook with a tab per store
@@ -74,7 +77,7 @@ Every push to your main branch redeploys automatically.
 
 ## Security notes (read this, don't skip)
 
-- The admin password is never stored in plaintext anywhere, only its bcrypt hash, and only in Vercel's environment variables.
+- **Current state: the admin password is stored in plain text** in `ADMIN_PASSWORD`, not hashed. This was a deliberate temporary swap to unblock local login debugging (see git history / conversation for why bcrypt comparisons were failing). Before this app is used for real data on a machine or deployment anyone else could access, switch back to bcrypt: restore `ADMIN_PASSWORD_HASH` + `bcrypt.compare` in `app/api/auth/login/route.js`, generate a hash with `node scripts/hash-password.js "your-password"`, and remove `ADMIN_PASSWORD` from your env entirely.
 - Session cookie is `httpOnly`, `secure`, `sameSite: strict`, so it's inaccessible to JS and won't be sent cross-site. It expires after 7 days.
 - `middleware.js` blocks every route except `/login` and the login API without a valid session, this includes direct API calls, not just page navigation.
 - If you ever suspect the session is compromised, rotate `JWT_SECRET` in Vercel, that immediately invalidates all existing sessions.

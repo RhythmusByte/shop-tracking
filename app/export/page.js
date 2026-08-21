@@ -2,17 +2,11 @@
 
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-
-function todayStr() {
-  const d = new Date();
-  const tz = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - tz * 60000);
-  return local.toISOString().slice(0, 10);
-}
+import { totalSales } from "@/lib/calc";
+import { todayStr, firstOfMonthStr } from "@/lib/date";
 
 function firstOfMonth() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  return firstOfMonthStr();
 }
 
 const COLUMNS = [
@@ -20,10 +14,15 @@ const COLUMNS = [
   ["storeName", "Store"],
   ["storeCode", "Code"],
   ["onlineSales", "Online Sales"],
-  ["offlineSales", "Offline Sales"],
+  ["cashSales", "Cash"],
+  ["upiSales", "UPI"],
+  ["cardSales", "Card"],
+  ["creditSales", "Credit"],
+  ["totalSale", "Total Sale"],
+  ["totalExpense", "Total Expense"],
   ["adStartTime", "Ad Start Time"],
   ["adStartedOnTime", "Ad On Time (6AM)"],
-  ["adSalesConverted", "Ad Sales Converted"],
+  ["adConversions", "Ad Conversions (count)"],
   ["openingTime", "Opening Time"],
   ["stockInTime", "Stock In Time"],
   ["stockInNotes", "Stock In Notes"],
@@ -45,6 +44,7 @@ function toRow(entry) {
     let value;
     if (key === "storeName") value = entry.store?.name ?? "";
     else if (key === "storeCode") value = entry.store?.code ?? "";
+    else if (key === "totalSale") value = totalSales(entry);
     else value = entry[key];
     if (typeof value === "boolean") value = value ? "Yes" : "No";
     row[label] = value ?? "";
