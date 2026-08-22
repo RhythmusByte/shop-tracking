@@ -13,13 +13,13 @@ const COLUMNS = [
   ["date", "Date"],
   ["storeName", "Store"],
   ["storeCode", "Code"],
-  ["onlineSales", "Online Sales"],
+  ["onlineSalesCount", "Online Orders (count)"],
+  ["offlineSalesCount", "Offline Orders (count)"],
   ["cashSales", "Cash"],
   ["upiSales", "UPI"],
   ["cardSales", "Card"],
   ["creditSales", "Credit"],
   ["totalSale", "Total Sale"],
-  ["totalExpense", "Total Expense"],
   ["adStartTime", "Ad Start Time"],
   ["adStartedOnTime", "Ad On Time (6AM)"],
   ["adConversions", "Ad Conversions (count)"],
@@ -30,6 +30,7 @@ const COLUMNS = [
   ["stockLeftNotes", "Stock Left Notes"],
   ["bankStatementChecked", "Bank Statement Checked"],
   ["bankCreditedBy12PM", "Credited By 12PM"],
+  ["fmoAccount", "FMO Account (ref)"],
   ["damagesChecked", "Damages Checked"],
   ["damagesFound", "Damages Found"],
   ["damagesNotes", "Damages Notes"],
@@ -70,14 +71,31 @@ export default function ExportPage() {
     return res.entries || [];
   }
 
+  async function fetchExpenses(storeId) {
+    const qs = new URLSearchParams({ from, to });
+    if (storeId) qs.set("store", storeId);
+    const res = await fetch(`/api/expenses?${qs.toString()}`).then((r) => r.json());
+    return res.expenses || [];
+  }
+
+  function expenseRows(expenses) {
+    return expenses.map((e) => ({
+      Date: e.date,
+      Store: e.store?.name ?? "",
+      Description: e.description,
+      Amount: e.amount,
+      Notes: e.notes,
+    }));
+  }
+
   async function exportAllStoresCombined() {
     setBusy(true);
     setMessage("");
     try {
-      const entries = await fetchEntries();
+      const [entries, expenses] = await Promise.all([fetchEntries(), fetchExpenses()]);
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(entries.map(toRow));
-      XLSX.utils.book_append_sheet(wb, ws, "All Stores");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(entries.map(toRow)), "All Stores");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows(expenses)), "Expenses");
       XLSX.writeFile(wb, `all-stores_${from}_to_${to}.xlsx`);
     } finally {
       setBusy(false);
@@ -117,9 +135,9 @@ export default function ExportPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold text-slate-800 mb-5">Export to spreadsheet</h1>
+      <h1 className="text-xl font-semibold text-slate-800 dark:text-brand-50 mb-5">Export to spreadsheet</h1>
 
-      <div className="card mb-6">
+      <div className="card mb-6 animate-fade-in">
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
             <label className="label">From</label>
@@ -141,26 +159,26 @@ export default function ExportPage() {
         </div>
       </div>
 
-      <div className="card">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">Export a single store</h3>
+      <div className="card animate-fade-in">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">Export a single store</h3>
         <div className="space-y-2">
           {stores.map((s) => (
             <div key={s._id} className="flex items-center justify-between">
-              <span className="text-sm text-slate-700">{s.name} ({s.code})</span>
+              <span className="text-sm text-slate-700 dark:text-brand-100">{s.name} ({s.code})</span>
               <button
                 onClick={() => exportSingleStore(s._id, s.code)}
                 disabled={busy}
-                className="text-sm text-brand-600 hover:underline"
+                className="text-sm text-brand-600 dark:text-brand-300 hover:underline"
               >
                 Export
               </button>
             </div>
           ))}
-          {stores.length === 0 && <p className="text-sm text-slate-500">No stores yet.</p>}
+          {stores.length === 0 && <p className="text-sm text-slate-500 dark:text-slate-400">No stores yet.</p>}
         </div>
       </div>
 
-      {message && <p className="text-sm text-slate-500 mt-3">{message}</p>}
+      {message && <p className="text-sm text-slate-500 dark:text-slate-400 mt-3">{message}</p>}
     </div>
   );
 }
