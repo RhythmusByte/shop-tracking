@@ -5,32 +5,70 @@
 body {
   background-color: #f8fafc;
   color: #0f172a;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dark body {
+  background-color: #17121f;
+  color: #ede9fe;
 }
 
 .card {
-  @apply bg-white rounded-xl shadow-sm border border-slate-200 p-5;
+  @apply bg-white rounded-xl shadow-sm border border-slate-200 p-5 transition-colors duration-200;
+  @apply dark:bg-[#20182e] dark:border-[#3a2a52];
 }
 
 .btn {
-  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors;
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-95;
 }
 
 .btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  @apply btn bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-400;
 }
 
 .btn-secondary {
-  @apply btn bg-slate-100 text-slate-700 hover:bg-slate-200;
+  @apply btn bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-[#2c2140] dark:text-brand-100 dark:hover:bg-[#382a52];
 }
 
 .input {
-  @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
+  @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors duration-150;
+  @apply focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
+  @apply dark:bg-[#241934] dark:border-[#3a2a52] dark:text-brand-50 dark:placeholder-slate-500;
 }
 
 .label {
-  @apply block text-sm font-medium text-slate-600 mb-1;
+  @apply block text-sm font-medium text-slate-600 mb-1 dark:text-brand-200;
 }
 
 .checkbox-row {
   @apply flex items-center gap-2 py-1;
+}
+
+.animate-page {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #5b21b6;
 }
