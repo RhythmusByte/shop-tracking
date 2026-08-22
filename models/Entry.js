@@ -5,15 +5,15 @@ const EntrySchema = new mongoose.Schema(
     store: { type: mongoose.Schema.Types.ObjectId, ref: "Store", required: true },
     date: { type: String, required: true }, // "YYYY-MM-DD", one entry per store per date
 
-    // Sales, broken down by payment method. Total is computed (not stored) from these.
-    onlineSales: { type: Number, default: 0 },
+    // Order COUNTS, not amounts. e.g. "35 online orders today".
+    onlineSalesCount: { type: Number, default: 0 },
+    offlineSalesCount: { type: Number, default: 0 },
+
+    // Sales amounts, broken down by payment method. This is what "Total Sale" sums.
     cashSales: { type: Number, default: 0 },
     upiSales: { type: Number, default: 0 },
     cardSales: { type: Number, default: 0 },
     creditSales: { type: Number, default: 0 },
-
-    // Expenses for the day (cash spent on-site: petty cash, local purchases, etc.)
-    totalExpense: { type: Number, default: 0 },
 
     // Ads (must start at 6 AM). adConversions is a COUNT of orders attributed to the
     // ad, not a currency amount.
@@ -35,6 +35,8 @@ const EntrySchema = new mongoose.Schema(
     // Bank statement / deposit
     bankStatementChecked: { type: Boolean, default: false },
     bankCreditedBy12PM: { type: Boolean, default: false },
+    // Personal-reference figure, not part of any sales/expense total.
+    fmoAccount: { type: Number, default: 0 },
 
     // Damages
     damagesChecked: { type: Boolean, default: false },
