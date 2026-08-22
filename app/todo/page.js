@@ -107,12 +107,12 @@ export default function TodoPage() {
       <p className="text-sm text-slate-500 mb-5">{date}</p>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading...</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">Loading...</p>
       ) : (
         <>
           <div className="card mb-4">
             <h3 className="text-sm font-semibold text-slate-700 mb-3">Daily checklist</h3>
-            <div className="w-full bg-slate-100 rounded-full h-2 mb-4">
+            <div className="w-full bg-slate-100 dark:bg-[#2c2140] rounded-full h-2 mb-4">
               <div
                 className={`h-2 rounded-full ${globalDone === globalItems.length ? "bg-green-500" : "bg-brand-500"}`}
                 style={{ width: `${(globalDone / globalItems.length) * 100}%` }}
@@ -120,10 +120,10 @@ export default function TodoPage() {
             </div>
             <div className="space-y-1">
               {globalItems.map((item) => (
-                <label key={item.key} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <label key={item.key} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-[#2c2140] cursor-pointer">
                   <input type="checkbox" checked={!!todo[item.key]} onChange={() => toggleGlobal(item.key)}
                     className="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                  <span className={`text-sm ${todo[item.key] ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                  <span className={`text-sm ${todo[item.key] ? "text-slate-400 line-through" : "text-slate-700 dark:text-brand-100"}`}>
                     {item.label}
                   </span>
                 </label>
@@ -136,10 +136,10 @@ export default function TodoPage() {
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Per-store calls</h3>
               <div className="space-y-1">
                 {storeCallTasks.map((t) => (
-                  <label key={t._id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+                  <label key={t._id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-[#2c2140] cursor-pointer">
                     <input type="checkbox" checked={t.done} onChange={() => toggleTask(t)}
                       className="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                    <span className={`text-sm ${t.done ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                    <span className={`text-sm ${t.done ? "text-slate-400 line-through" : "text-slate-700 dark:text-brand-100"}`}>
                       {t.title}
                     </span>
                   </label>
@@ -167,18 +167,18 @@ export default function TodoPage() {
             </form>
 
             {otherTasks.length === 0 ? (
-              <p className="text-sm text-slate-500">No other tasks for today.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">No other tasks for today.</p>
             ) : (
               <div className="space-y-1">
                 {otherTasks.map((t) => (
-                  <div key={t._id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50">
+                  <div key={t._id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-[#2c2140]">
                     <label className="flex items-center gap-3 cursor-pointer flex-1">
                       <input type="checkbox" checked={t.done} onChange={() => toggleTask(t)}
                         className="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                      <span className={`text-sm ${t.done ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                      <span className={`text-sm ${t.done ? "text-slate-400 line-through" : "text-slate-700 dark:text-brand-100"}`}>
                         {t.title}
-                        {t.store?.code && <span className="text-slate-400"> · {t.store.code}</span>}
-                        {t.assignedTo && <span className="text-slate-400"> · {t.assignedTo}</span>}
+                        {t.store?.code && <span className="text-slate-400 dark:text-slate-500"> · {t.store.code}</span>}
+                        {t.assignedTo && <span className="text-slate-400 dark:text-slate-500"> · {t.assignedTo}</span>}
                       </span>
                     </label>
                     <button onClick={() => deleteTask(t._id)} className="text-xs text-red-500 hover:underline">
