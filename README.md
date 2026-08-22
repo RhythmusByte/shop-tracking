@@ -112,7 +112,3 @@ middleware.js        Route-level auth guard
 - No automated reminders (e.g. a nudge if the ad hasn't started by 6 AM). A Vercel
   Cron Job calling a notification webhook would be the natural next step.
 
-## License
-
-MIT, or add your own license terms here before making the repo public if you want
-something different.
