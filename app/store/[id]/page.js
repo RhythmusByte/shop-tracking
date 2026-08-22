@@ -6,12 +6,12 @@ import { todayStr } from "@/lib/date";
 import { totalSales } from "@/lib/calc";
 
 const EMPTY = {
-  onlineSales: 0,
+  onlineSalesCount: 0,
+  offlineSalesCount: 0,
   cashSales: 0,
   upiSales: 0,
   cardSales: 0,
   creditSales: 0,
-  totalExpense: 0,
   adStartTime: "",
   adStartedOnTime: false,
   adConversions: 0,
@@ -22,6 +22,7 @@ const EMPTY = {
   stockLeftNotes: "",
   bankStatementChecked: false,
   bankCreditedBy12PM: false,
+  fmoAccount: 0,
   damagesChecked: false,
   damagesFound: false,
   damagesNotes: "",
@@ -45,18 +46,24 @@ export default function StoreEntryPage({ params }) {
   const [purchaseForm, setPurchaseForm] = useState({ description: "", amount: "", vendor: "" });
   const [purchaseSaving, setPurchaseSaving] = useState(false);
 
+  const [expenses, setExpenses] = useState([]);
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", notes: "" });
+  const [expenseSaving, setExpenseSaving] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
-    const [storesRes, entryRes, purchasesRes] = await Promise.all([
+    const [storesRes, entryRes, purchasesRes, expensesRes] = await Promise.all([
       fetch("/api/stores").then((r) => r.json()),
       fetch(`/api/entries?store=${storeId}&date=${date}`).then((r) => r.json()),
       fetch(`/api/purchases?store=${storeId}&date=${date}`).then((r) => r.json()),
+      fetch(`/api/expenses?store=${storeId}&date=${date}`).then((r) => r.json()),
     ]);
     const s = (storesRes.stores || []).find((x) => x._id === storeId);
     setStore(s || null);
     const existing = (entryRes.entries || [])[0];
     setForm(existing ? { ...EMPTY, ...existing } : EMPTY);
     setPurchases(purchasesRes.purchases || []);
+    setExpenses(expensesRes.expenses || []);
     setLoading(false);
   }, [storeId, date]);
 
@@ -87,8 +94,7 @@ export default function StoreEntryPage({ params }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        store: storeId,
-        date,
+        store: storeId, date,
         description: purchaseForm.description,
         amount: Number(purchaseForm.amount),
         vendor: purchaseForm.vendor,
@@ -107,61 +113,92 @@ export default function StoreEntryPage({ params }) {
     setPurchases((prev) => prev.filter((p) => p._id !== id));
   }
 
-  if (loading) return <p className="text-sm text-slate-500">Loading...</p>;
+  async function addExpense(e) {
+    e.preventDefault();
+    if (!expenseForm.description || !expenseForm.amount) return;
+    setExpenseSaving(true);
+    const res = await fetch("/api/expenses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        store: storeId, date,
+        description: expenseForm.description,
+        amount: Number(expenseForm.amount),
+        notes: expenseForm.notes,
+      }),
+    });
+    setExpenseSaving(false);
+    if (res.ok) {
+      setExpenseForm({ description: "", amount: "", notes: "" });
+      const ex = await fetch(`/api/expenses?store=${storeId}&date=${date}`).then((r) => r.json());
+      setExpenses(ex.expenses || []);
+    }
+  }
+
+  async function deleteExpense(id) {
+    await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+    setExpenses((prev) => prev.filter((e) => e._id !== id));
+  }
+
+  if (loading) return <p className="text-sm text-slate-500 dark:text-slate-400">Loading...</p>;
   if (!store) return <p className="text-sm text-red-600">Store not found.</p>;
 
   const purchaseTotal = purchases.reduce((sum, p) => sum + p.amount, 0);
+  const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
   const sales = totalSales(form);
 
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-1">
-        <button onClick={() => router.push("/")} className="text-sm text-slate-500 hover:text-slate-800">
+        <button onClick={() => router.push("/")} className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-brand-100">
           ← Dashboard
         </button>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input w-auto" />
       </div>
-      <h1 className="text-xl font-semibold text-slate-800 mb-1">
-        {store.name} <span className="text-slate-400 font-normal text-base">({store.code})</span>
+      <h1 className="text-xl font-semibold text-slate-800 dark:text-brand-50 mb-1">
+        {store.name} <span className="text-slate-400 dark:text-slate-500 font-normal text-base">({store.code})</span>
       </h1>
-      <p className="text-sm text-slate-500 mb-5">
-        Total sales today: <span className="font-semibold text-slate-800">₹{sales.toLocaleString()}</span>
-        {"  ·  "}
-        Purchases: <span className="font-semibold text-slate-800">₹{purchaseTotal.toLocaleString()}</span>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+        Sales: <span className="font-semibold text-slate-800 dark:text-brand-50">₹{sales.toLocaleString()}</span>
+        {"  ·  "}Purchases: <span className="font-semibold text-slate-800 dark:text-brand-50">₹{purchaseTotal.toLocaleString()}</span>
+        {"  ·  "}Expenses: <span className="font-semibold text-slate-800 dark:text-brand-50">₹{expenseTotal.toLocaleString()}</span>
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Section title="Sales by payment method">
-          <Field label="Online sales (₹)">
-            <input type="number" className="input" value={form.onlineSales}
-              onChange={(e) => set("onlineSales", Number(e.target.value))} />
+        <Section title="Order counts">
+          <Field label="Online sales (count of orders)">
+            <input type="number" className="input" value={form.onlineSalesCount}
+              onChange={(e) => set("onlineSalesCount", Number(e.target.value))} />
           </Field>
-          <Field label="Cash (₹)">
+          <Field label="Offline sales (count of orders)">
+            <input type="number" className="input" value={form.offlineSalesCount}
+              onChange={(e) => set("offlineSalesCount", Number(e.target.value))} />
+          </Field>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            These are order counts, not amounts. Actual money is tracked below.
+          </p>
+        </Section>
+
+        <Section title="Sales by payment method (₹)">
+          <Field label="Cash">
             <input type="number" className="input" value={form.cashSales}
               onChange={(e) => set("cashSales", Number(e.target.value))} />
           </Field>
-          <Field label="UPI (₹)">
+          <Field label="UPI">
             <input type="number" className="input" value={form.upiSales}
               onChange={(e) => set("upiSales", Number(e.target.value))} />
           </Field>
-          <Field label="Card (₹)">
+          <Field label="Card">
             <input type="number" className="input" value={form.cardSales}
               onChange={(e) => set("cardSales", Number(e.target.value))} />
           </Field>
-          <Field label="Credit (₹)">
+          <Field label="Credit">
             <input type="number" className="input" value={form.creditSales}
               onChange={(e) => set("creditSales", Number(e.target.value))} />
           </Field>
-          <div className="pt-2 border-t border-slate-100 text-sm font-medium text-slate-700">
+          <div className="pt-2 border-t border-slate-100 dark:border-[#3a2a52] text-sm font-medium text-slate-700 dark:text-brand-100">
             Total sale: ₹{sales.toLocaleString()}
           </div>
-        </Section>
-
-        <Section title="Expense">
-          <Field label="Total expense today (₹)">
-            <input type="number" className="input" value={form.totalExpense}
-              onChange={(e) => set("totalExpense", Number(e.target.value))} />
-          </Field>
         </Section>
 
         <Section title="Ad Performance (must start 6 AM)">
@@ -183,7 +220,7 @@ export default function StoreEntryPage({ params }) {
               onChange={(e) => set("openingTime", e.target.value)} />
           </Field>
           {store.expectedOpeningTime && (
-            <p className="text-xs text-slate-400">Expected: {store.expectedOpeningTime}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Expected: {store.expectedOpeningTime}</p>
           )}
         </Section>
 
@@ -212,6 +249,10 @@ export default function StoreEntryPage({ params }) {
             onChange={(v) => set("bankStatementChecked", v)} />
           <Checkbox label="Credited by 12 PM" checked={form.bankCreditedBy12PM}
             onChange={(v) => set("bankCreditedBy12PM", v)} />
+          <Field label="FMO account (personal reference)">
+            <input type="number" className="input" value={form.fmoAccount}
+              onChange={(e) => set("fmoAccount", Number(e.target.value))} />
+          </Field>
         </Section>
 
         <Section title="Damages">
@@ -242,11 +283,11 @@ export default function StoreEntryPage({ params }) {
         <button onClick={save} disabled={saving} className="btn-primary">
           {saving ? "Saving..." : "Save entry"}
         </button>
-        {savedAt && <span className="text-xs text-slate-400">Saved at {savedAt}</span>}
+        {savedAt && <span className="text-xs text-slate-400 dark:text-slate-500">Saved at {savedAt}</span>}
       </div>
 
-      <div className="card">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">Purchases for {date}</h3>
+      <div className="card mb-6 animate-fade-in">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">Purchases for {date}</h3>
         <form onSubmit={addPurchase} className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
           <input className="input sm:col-span-2" placeholder="Description"
             value={purchaseForm.description}
@@ -263,26 +304,63 @@ export default function StoreEntryPage({ params }) {
         </form>
 
         {purchases.length === 0 ? (
-          <p className="text-sm text-slate-500">No purchases logged for this date.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">No purchases logged for this date.</p>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-[#3a2a52]">
             {purchases.map((p) => (
               <div key={p._id} className="flex items-center justify-between py-2 text-sm">
                 <div>
-                  <span className="text-slate-700">{p.description}</span>
-                  {p.vendor && <span className="text-slate-400"> · {p.vendor}</span>}
+                  <span className="text-slate-700 dark:text-brand-100">{p.description}</span>
+                  {p.vendor && <span className="text-slate-400 dark:text-slate-500"> · {p.vendor}</span>}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-medium text-slate-800">₹{p.amount.toLocaleString()}</span>
-                  <button onClick={() => deletePurchase(p._id)} className="text-red-500 hover:underline text-xs">
-                    Remove
-                  </button>
+                  <span className="font-medium text-slate-800 dark:text-brand-50">₹{p.amount.toLocaleString()}</span>
+                  <button onClick={() => deletePurchase(p._id)} className="text-red-500 hover:underline text-xs">Remove</button>
                 </div>
               </div>
             ))}
-            <div className="flex justify-between pt-2 text-sm font-semibold text-slate-800">
-              <span>Total</span>
-              <span>₹{purchaseTotal.toLocaleString()}</span>
+            <div className="flex justify-between pt-2 text-sm font-semibold text-slate-800 dark:text-brand-50">
+              <span>Total</span><span>₹{purchaseTotal.toLocaleString()}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="card animate-fade-in">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">Expenses for {date}</h3>
+        <form onSubmit={addExpense} className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
+          <input className="input sm:col-span-2" placeholder="Description"
+            value={expenseForm.description}
+            onChange={(e) => setExpenseForm((f) => ({ ...f, description: e.target.value }))} />
+          <input className="input" type="number" placeholder="Amount"
+            value={expenseForm.amount}
+            onChange={(e) => setExpenseForm((f) => ({ ...f, amount: e.target.value }))} />
+          <div className="flex gap-2">
+            <input className="input" placeholder="Notes (optional)"
+              value={expenseForm.notes}
+              onChange={(e) => setExpenseForm((f) => ({ ...f, notes: e.target.value }))} />
+            <button type="submit" disabled={expenseSaving} className="btn-secondary shrink-0">Add</button>
+          </div>
+        </form>
+
+        {expenses.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">No expenses logged for this date.</p>
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-[#3a2a52]">
+            {expenses.map((ex) => (
+              <div key={ex._id} className="flex items-center justify-between py-2 text-sm">
+                <div>
+                  <span className="text-slate-700 dark:text-brand-100">{ex.description}</span>
+                  {ex.notes && <span className="text-slate-400 dark:text-slate-500"> · {ex.notes}</span>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-slate-800 dark:text-brand-50">₹{ex.amount.toLocaleString()}</span>
+                  <button onClick={() => deleteExpense(ex._id)} className="text-red-500 hover:underline text-xs">Remove</button>
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-between pt-2 text-sm font-semibold text-slate-800 dark:text-brand-50">
+              <span>Total</span><span>₹{expenseTotal.toLocaleString()}</span>
             </div>
           </div>
         )}
@@ -293,8 +371,8 @@ export default function StoreEntryPage({ params }) {
 
 function Section({ title, children }) {
   return (
-    <div className="card">
-      <h3 className="text-sm font-semibold text-slate-700 mb-3">{title}</h3>
+    <div className="card animate-fade-in">
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">{title}</h3>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -314,7 +392,7 @@ function Checkbox({ label, checked, onChange }) {
     <label className="checkbox-row cursor-pointer select-none">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}
         className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-      <span className="text-sm text-slate-700">{label}</span>
+      <span className="text-sm text-slate-700 dark:text-brand-100">{label}</span>
     </label>
   );
 }
