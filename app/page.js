@@ -2,14 +2,29 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { TrendingUp, Wallet, Store as StoreIcon, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { todayStr } from "@/lib/date";
 import { totalSales, openingStatus, OPENING_STATUS_LABEL, OPENING_STATUS_COLOR } from "@/lib/calc";
+import PageLoader from "@/components/PageLoader";
 
 function prevDay(dateStr) {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() - 1);
   return d.toISOString().slice(0, 10);
 }
+
+function nextDay(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+const HERO_GRADIENTS = [
+  "from-violet-500 to-purple-600",
+  "from-fuchsia-500 to-pink-600",
+  "from-indigo-500 to-blue-600",
+  "from-emerald-500 to-teal-600",
+];
 
 export default function DashboardPage() {
   const [date, setDate] = useState(todayStr());
@@ -68,20 +83,22 @@ export default function DashboardPage() {
   }
 
   const prevTotal = prevEntries.reduce((sum, e) => sum + totalSales(e), 0);
+  const todayTotal = entries.reduce((sum, e) => sum + totalSales(e), 0);
+  const todayExpense = Object.values(expensesByStore).reduce((a, b) => a + b, 0);
+  const storesReporting = entries.length;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <h1 className="text-xl font-semibold text-slate-800 dark:text-brand-50">Dashboard</h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setDate(prevDay(date))}
-            className="btn-secondary px-2.5 py-1.5"
-            aria-label="Previous day"
-          >
-            ←
+          <button onClick={() => setDate(prevDay(date))} className="btn-secondary p-2" aria-label="Previous day">
+            <ChevronLeft size={16} />
           </button>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input w-auto" />
+          <button onClick={() => setDate(nextDay(date))} className="btn-secondary p-2" aria-label="Next day">
+            <ChevronRight size={16} />
+          </button>
           {!isToday && (
             <button onClick={() => setDate(todayStr())} className="text-xs text-brand-600 dark:text-brand-300 hover:underline">
               Today
@@ -91,32 +108,46 @@ export default function DashboardPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">Loading...</p>
+        <PageLoader label="Loading dashboard" />
       ) : stores.length === 0 ? (
         <div className="card">
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            No stores yet. Add your four stores on the{" "}
+            No stores yet. Add your stores on the{" "}
             <Link href="/stores" className="text-brand-600 dark:text-brand-300 underline">Stores</Link> page first.
           </p>
         </div>
       ) : (
         <>
-          <div className="card mb-5 animate-fade-in">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-brand-100">Previous day's sales ({pDate})</h2>
-              <span className="text-lg font-semibold text-slate-800 dark:text-brand-50">₹{prevTotal.toLocaleString()}</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {stores.map((store) => {
-                const e = entryFor(prevEntries, store._id);
-                return (
-                  <div key={store._id} className="text-sm">
-                    <p className="text-slate-500 dark:text-slate-400">{store.code}</p>
-                    <p className="font-medium text-slate-800 dark:text-brand-50">₹{totalSales(e).toLocaleString()}</p>
-                  </div>
-                );
-              })}
-            </div>
+          {/* Hero stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            <StatCard
+              icon={<TrendingUp size={18} />}
+              label="Total sales"
+              value={`₹${todayTotal.toLocaleString()}`}
+              gradient="from-violet-500 to-purple-600"
+              delay={0}
+            />
+            <StatCard
+              icon={<Wallet size={18} />}
+              label="Total expenses"
+              value={`₹${todayExpense.toLocaleString()}`}
+              gradient="from-amber-500 to-orange-600"
+              delay={60}
+            />
+            <StatCard
+              icon={<StoreIcon size={18} />}
+              label="Stores reporting"
+              value={`${storesReporting}/${stores.length}`}
+              gradient="from-indigo-500 to-blue-600"
+              delay={120}
+            />
+            <StatCard
+              icon={<CheckCircle2 size={18} />}
+              label="Previous day sales"
+              value={`₹${prevTotal.toLocaleString()}`}
+              gradient="from-emerald-500 to-teal-600"
+              delay={180}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -125,14 +156,16 @@ export default function DashboardPage() {
               const pct = completeness(entry);
               const status = openingStatus(store, entry);
               const expenseTotal = expensesByStore[store._id] || 0;
+              const gradient = HERO_GRADIENTS[i % HERO_GRADIENTS.length];
               return (
                 <Link
                   href={`/store/${store._id}?date=${date}`}
                   key={store._id}
-                  className="card hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 animate-fade-in"
-                  style={{ animationDelay: `${i * 40}ms` }}
+                  className="card hover:shadow-lg hover:-translate-y-1 transition-all duration-200 animate-fade-in overflow-hidden relative"
+                  style={{ animationDelay: `${i * 60}ms` }}
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient}`} />
+                  <div className="flex items-center justify-between mb-2 mt-1">
                     <h2 className="font-medium text-slate-800 dark:text-brand-50">{store.name}</h2>
                     <div className="flex items-center gap-2">
                       {status !== "unset" && (
@@ -144,9 +177,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="w-full bg-slate-100 dark:bg-[#2c2140] rounded-full h-2 mb-2">
+                  <div className="w-full bg-slate-100 dark:bg-[#2c2140] rounded-full h-2 mb-2 overflow-hidden">
                     <div
-                      className={`h-2 rounded-full transition-all duration-500 ${pct === 100 ? "bg-green-500" : "bg-brand-500"}`}
+                      className={`h-2 rounded-full bg-gradient-to-r transition-all duration-700 ${
+                        pct === 100 ? "from-emerald-500 to-green-500" : gradient
+                      }`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -170,6 +205,21 @@ export default function DashboardPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, gradient, delay }) {
+  return (
+    <div
+      className={`stat-card bg-gradient-to-br ${gradient} animate-fade-in`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="flex items-center gap-2 opacity-90 mb-2">
+        {icon}
+        <span className="text-xs font-medium">{label}</span>
+      </div>
+      <p className="text-xl font-bold">{value}</p>
     </div>
   );
 }
