@@ -19,7 +19,7 @@ export async function GET(req) {
   if (date) filter.date = date;
   else if (from && to) filter.date = { $gte: from, $lte: to };
 
-  const expenses = await Expense.find(filter).populate("store").sort({ date: -1 }).lean();
+  const expenses = await Expense.find(filter).populate("store").populate("staff").sort({ date: -1 }).lean();
   return NextResponse.json({ expenses });
 }
 
@@ -38,6 +38,8 @@ export async function POST(req) {
     description: body.description,
     amount: Number(body.amount),
     notes: body.notes || "",
+    category: body.category === "salary" ? "salary" : "general",
+    staff: body.staff || null,
   });
   return NextResponse.json({ expense }, { status: 201 });
 }
