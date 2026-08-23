@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { todayStr } from "@/lib/date";
 import { totalSales } from "@/lib/calc";
+import PageLoader from "@/components/PageLoader";
 
 const EMPTY = {
   onlineSalesCount: 0,
@@ -47,16 +48,20 @@ export default function StoreEntryPage({ params }) {
   const [purchaseSaving, setPurchaseSaving] = useState(false);
 
   const [expenses, setExpenses] = useState([]);
-  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", notes: "" });
+  const [staff, setStaff] = useState([]);
+  const [expenseForm, setExpenseForm] = useState({
+    description: "", amount: "", notes: "", category: "general", staff: "",
+  });
   const [expenseSaving, setExpenseSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [storesRes, entryRes, purchasesRes, expensesRes] = await Promise.all([
+    const [storesRes, entryRes, purchasesRes, expensesRes, staffRes] = await Promise.all([
       fetch("/api/stores").then((r) => r.json()),
       fetch(`/api/entries?store=${storeId}&date=${date}`).then((r) => r.json()),
       fetch(`/api/purchases?store=${storeId}&date=${date}`).then((r) => r.json()),
       fetch(`/api/expenses?store=${storeId}&date=${date}`).then((r) => r.json()),
+      fetch(`/api/staff?store=${storeId}`).then((r) => r.json()),
     ]);
     const s = (storesRes.stores || []).find((x) => x._id === storeId);
     setStore(s || null);
@@ -64,6 +69,7 @@ export default function StoreEntryPage({ params }) {
     setForm(existing ? { ...EMPTY, ...existing } : EMPTY);
     setPurchases(purchasesRes.purchases || []);
     setExpenses(expensesRes.expenses || []);
+    setStaff((staffRes.staff || []).filter((st) => st.active));
     setLoading(false);
   }, [storeId, date]);
 
@@ -113,6 +119,16 @@ export default function StoreEntryPage({ params }) {
     setPurchases((prev) => prev.filter((p) => p._id !== id));
   }
 
+  function handleSalaryStaffPick(staffId) {
+    const chosen = staff.find((s) => s._id === staffId);
+    setExpenseForm((f) => ({
+      ...f,
+      staff: staffId,
+      description: chosen ? `Salary - ${chosen.name}` : f.description,
+      amount: chosen ? String(chosen.monthlySalary) : f.amount,
+    }));
+  }
+
   async function addExpense(e) {
     e.preventDefault();
     if (!expenseForm.description || !expenseForm.amount) return;
@@ -125,11 +141,13 @@ export default function StoreEntryPage({ params }) {
         description: expenseForm.description,
         amount: Number(expenseForm.amount),
         notes: expenseForm.notes,
+        category: expenseForm.category,
+        staff: expenseForm.category === "salary" ? expenseForm.staff || null : null,
       }),
     });
     setExpenseSaving(false);
     if (res.ok) {
-      setExpenseForm({ description: "", amount: "", notes: "" });
+      setExpenseForm({ description: "", amount: "", notes: "", category: "general", staff: "" });
       const ex = await fetch(`/api/expenses?store=${storeId}&date=${date}`).then((r) => r.json());
       setExpenses(ex.expenses || []);
     }
@@ -140,8 +158,8 @@ export default function StoreEntryPage({ params }) {
     setExpenses((prev) => prev.filter((e) => e._id !== id));
   }
 
-  if (loading) return <p className="text-sm text-slate-500 dark:text-slate-400">Loading...</p>;
-  if (!store) return <p className="text-sm text-red-600">Store not found.</p>;
+  if (loading) return <PageLoader label="Loading store details" />;
+  if (!store) return <p className="text-sm text-red-600 dark:text-red-400">Store not found.</p>;
 
   const purchaseTotal = purchases.reduce((sum, p) => sum + p.amount, 0);
   const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -328,19 +346,48 @@ export default function StoreEntryPage({ params }) {
 
       <div className="card animate-fade-in">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">Expenses for {date}</h3>
-        <form onSubmit={addExpense} className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
-          <input className="input sm:col-span-2" placeholder="Description"
-            value={expenseForm.description}
-            onChange={(e) => setExpenseForm((f) => ({ ...f, description: e.target.value }))} />
-          <input className="input" type="number" placeholder="Amount"
-            value={expenseForm.amount}
-            onChange={(e) => setExpenseForm((f) => ({ ...f, amount: e.target.value }))} />
+        <form onSubmit={addExpense} className="space-y-2 mb-4">
           <div className="flex gap-2">
-            <input className="input" placeholder="Notes (optional)"
-              value={expenseForm.notes}
-              onChange={(e) => setExpenseForm((f) => ({ ...f, notes: e.target.value }))} />
-            <button type="submit" disabled={expenseSaving} className="btn-secondary shrink-0">Add</button>
+            <select
+              className="input w-auto"
+              value={expenseForm.category}
+              onChange={(e) => setExpenseForm((f) => ({ ...f, category: e.target.value, staff: "" }))}
+            >
+              <option value="general">General</option>
+              <option value="salary">Salary</option>
+            </select>
+            {expenseForm.category === "salary" && (
+              <select
+                className="input"
+                value={expenseForm.staff}
+                onChange={(e) => handleSalaryStaffPick(e.target.value)}
+              >
+                <option value="">Select staff member</option>
+                {staff.map((s) => (
+                  <option key={s._id} value={s._id}>{s.name} (₹{s.monthlySalary.toLocaleString()}/mo)</option>
+                ))}
+              </select>
+            )}
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <input className="input sm:col-span-2" placeholder="Description"
+              value={expenseForm.description}
+              onChange={(e) => setExpenseForm((f) => ({ ...f, description: e.target.value }))} />
+            <input className="input" type="number" placeholder="Amount"
+              value={expenseForm.amount}
+              onChange={(e) => setExpenseForm((f) => ({ ...f, amount: e.target.value }))} />
+            <div className="flex gap-2">
+              <input className="input" placeholder="Notes (optional)"
+                value={expenseForm.notes}
+                onChange={(e) => setExpenseForm((f) => ({ ...f, notes: e.target.value }))} />
+              <button type="submit" disabled={expenseSaving} className="btn-secondary shrink-0">Add</button>
+            </div>
+          </div>
+          {expenseForm.category === "salary" && staff.length === 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              No staff added for this store yet. Add staff on the Stores page first, or just log this as a manual amount.
+            </p>
+          )}
         </form>
 
         {expenses.length === 0 ? (
@@ -351,6 +398,11 @@ export default function StoreEntryPage({ params }) {
               <div key={ex._id} className="flex items-center justify-between py-2 text-sm">
                 <div>
                   <span className="text-slate-700 dark:text-brand-100">{ex.description}</span>
+                  {ex.category === "salary" && (
+                    <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                      Salary
+                    </span>
+                  )}
                   {ex.notes && <span className="text-slate-400 dark:text-slate-500"> · {ex.notes}</span>}
                 </div>
                 <div className="flex items-center gap-3">
