@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { todayStr } from "@/lib/date";
+import PageLoader from "@/components/PageLoader";
 
 export default function TodoPage() {
   const date = todayStr();
@@ -107,7 +108,7 @@ export default function TodoPage() {
       <p className="text-sm text-slate-500 mb-5">{date}</p>
 
       {loading ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">Loading...</p>
+        <PageLoader />
       ) : (
         <>
           <div className="card mb-4">
