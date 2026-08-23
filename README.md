@@ -70,7 +70,7 @@ Re-saving an entry for the same store and date **edits it in place** (upsert on
 
 ```bash
 git clone <this-repo-url>
-cd store-tracker
+cd shop-tracker
 npm install
 cp .env.local.example .env.local
 ```
@@ -156,11 +156,3 @@ middleware.js        Route-level auth guard (session + admin-only gating)
   Vercel Cron Job calling a notification webhook would be the natural next step.
 - Charting uses `recharts` v2, which works fine but is no longer the actively
   developed branch (v3 exists).
-
-## License
-
-MIT, or add your own license terms here if you want something different.
-
----
-
-Made by [Akhil Mahesh](https://akhilmahesh.com)
