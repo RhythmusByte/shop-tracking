@@ -1,5 +1,6 @@
 import "./globals.css";
 import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
 import ThemeScript from "@/components/ThemeScript";
 
 export const metadata = {
@@ -13,9 +14,10 @@ export default function RootLayout({ children }) {
       <head>
         <ThemeScript />
       </head>
-      <body>
+      <body className="flex flex-col min-h-screen">
         <Nav />
-        <main className="max-w-6xl mx-auto px-4 py-6 animate-page">{children}</main>
+        <main className="max-w-6xl mx-auto px-4 py-6 animate-page flex-1 w-full">{children}</main>
+        <Footer />
       </body>
     </html>
   );
