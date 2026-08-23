@@ -22,16 +22,29 @@ export async function middleware(req) {
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
-    if (payload.role !== "admin") throw new Error("bad role");
+
+    // User management is admin-only. Everything else just needs a valid
+    // logged-in session (any role).
+    const needsAdmin = pathname.startsWith("/api/users") || pathname.startsWith("/users");
+    if (needsAdmin && payload.role !== "admin") {
+      return redirectOrDeny(req, pathname, true);
+    }
+
     return NextResponse.next();
   } catch {
     return redirectOrDeny(req, pathname);
   }
 }
 
-function redirectOrDeny(req, pathname) {
+function redirectOrDeny(req, pathname, forbidden = false) {
   if (pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: forbidden ? "Admins only" : "Unauthorized" },
+      { status: forbidden ? 403 : 401 }
+    );
+  }
+  if (forbidden) {
+    return NextResponse.redirect(new URL("/", req.url));
   }
   const loginUrl = new URL("/login", req.url);
   return NextResponse.redirect(loginUrl);
