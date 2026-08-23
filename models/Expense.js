@@ -7,6 +7,9 @@ const ExpenseSchema = new mongoose.Schema(
     description: { type: String, required: true, trim: true },
     amount: { type: Number, required: true },
     notes: { type: String, default: "" },
+    // "salary" expenses can optionally reference the staff member being paid.
+    category: { type: String, enum: ["general", "salary"], default: "general" },
+    staff: { type: mongoose.Schema.Types.ObjectId, ref: "Staff", default: null },
   },
   { timestamps: true }
 );
