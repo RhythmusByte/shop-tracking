@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import Entry from "@/models/Entry";
+import Store from "@/models/Store";
 
 // GET /api/entries?date=YYYY-MM-DD              -> all stores' entries for a date
 // GET /api/entries?store=STORE_ID                -> all dates for a store (history)
