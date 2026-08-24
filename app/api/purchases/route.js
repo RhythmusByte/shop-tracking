@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import Purchase from "@/models/Purchase";
+import Store from "@/models/Store";
 
 // GET /api/purchases?store=ID&date=YYYY-MM-DD
 // GET /api/purchases?store=ID&from=YYYY-MM-DD&to=YYYY-MM-DD
