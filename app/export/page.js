@@ -134,7 +134,7 @@ export default function ExportPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <h1 className="text-xl font-semibold text-slate-800 dark:text-brand-50 mb-5">Export to spreadsheet</h1>
 
       <div className="card mb-6 animate-fade-in">
