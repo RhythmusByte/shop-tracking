@@ -4,8 +4,10 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { TrendingUp, Wallet, Store as StoreIcon, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { todayStr } from "@/lib/date";
-import { totalSales, openingStatus, OPENING_STATUS_LABEL, OPENING_STATUS_COLOR } from "@/lib/calc";
+import { totalSales, openingStatus } from "@/lib/calc";
 import PageLoader from "@/components/PageLoader";
+import StatusPill from "@/components/StatusPill";
+import CountUp from "@/components/CountUp";
 
 function prevDay(dateStr) {
   const d = new Date(dateStr + "T00:00:00");
@@ -123,14 +125,14 @@ export default function DashboardPage() {
             <StatCard
               icon={<TrendingUp size={18} />}
               label="Total sales"
-              value={`₹${todayTotal.toLocaleString()}`}
+              value={<CountUp value={todayTotal} prefix="₹" />}
               gradient="from-violet-500 to-purple-600"
               delay={0}
             />
             <StatCard
               icon={<Wallet size={18} />}
               label="Total expenses"
-              value={`₹${todayExpense.toLocaleString()}`}
+              value={<CountUp value={todayExpense} prefix="₹" />}
               gradient="from-amber-500 to-orange-600"
               delay={60}
             />
@@ -144,7 +146,7 @@ export default function DashboardPage() {
             <StatCard
               icon={<CheckCircle2 size={18} />}
               label="Previous day sales"
-              value={`₹${prevTotal.toLocaleString()}`}
+              value={<CountUp value={prevTotal} prefix="₹" />}
               gradient="from-emerald-500 to-teal-600"
               delay={180}
             />
@@ -161,18 +163,14 @@ export default function DashboardPage() {
                 <Link
                   href={`/store/${store._id}?date=${date}`}
                   key={store._id}
-                  className="card hover:shadow-lg hover:-translate-y-1 transition-all duration-200 animate-fade-in overflow-hidden relative"
+                  className="card animate-fade-in overflow-hidden relative"
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
                   <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient}`} />
                   <div className="flex items-center justify-between mb-2 mt-1">
                     <h2 className="font-medium text-slate-800 dark:text-brand-50">{store.name}</h2>
                     <div className="flex items-center gap-2">
-                      {status !== "unset" && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${OPENING_STATUS_COLOR[status]}`}>
-                          {OPENING_STATUS_LABEL[status]}
-                        </span>
-                      )}
+                      <StatusPill status={status} />
                       <span className="text-xs text-slate-400 dark:text-slate-500">{store.code}</span>
                     </div>
                   </div>
