@@ -166,7 +166,7 @@ export default function StoreEntryPage({ params }) {
   const sales = totalSales(form);
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <div className="flex items-center justify-between mb-1">
         <button onClick={() => router.push("/")} className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-brand-100">
           ← Dashboard
