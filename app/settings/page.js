@@ -64,7 +64,7 @@ export default function SettingsPage() {
   if (loading) return <PageLoader />;
 
   return (
-    <div className="max-w-md space-y-6">
+    <div className="mx-auto max-w-md space-y-6">
       <h1 className="text-xl font-semibold text-slate-800 dark:text-brand-50">Profile settings</h1>
 
       <form onSubmit={save} className="card space-y-4 animate-fade-in">
