@@ -118,7 +118,7 @@ export default function StoresPage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto max-w-3xl">
       <h1 className="text-xl font-semibold text-slate-800 dark:text-brand-50 mb-5">Stores</h1>
 
       <form onSubmit={addStore} className="card mb-6 animate-fade-in">
