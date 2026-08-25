@@ -103,7 +103,7 @@ export default function TodoPage() {
   const otherTasks = tasks.filter((t) => !(t.store && t.title.startsWith("Called ")));
 
   return (
-    <div className="max-w-xl">
+    <div className="mx-auto max-w-xl">
       <h1 className="text-xl font-semibold text-slate-800 mb-1">Today's TODO</h1>
       <p className="text-sm text-slate-500 mb-5">{date}</p>
 
