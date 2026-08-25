@@ -95,7 +95,7 @@ export default function PnlPage() {
 
   // Expense category breakdown (Salary is a real field; Petrol/Food/Profit
   // are keyword-matched from the description; everything else is General).
-  const categoryTotals = { salary: 0, petrol: 0, food: 0, profit: 0, general: 0 };
+  const categoryTotals = { salary: 0, petrol: 0, food: 0, profit: 0, general: 0, rent: 0 };
   for (const e of expenses) categoryTotals[categorizeExpense(e)] += e.amount;
   const categoryChartData = Object.entries(categoryTotals)
     .filter(([, amount]) => amount > 0)
