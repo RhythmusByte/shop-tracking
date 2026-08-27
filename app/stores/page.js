@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { whatsappLink } from "@/lib/calc";
+import { whatsappLink, formatMoney } from "@/lib/calc";
 import PageLoader from "@/components/PageLoader";
 
 const BLANK = { name: "", code: "", storeNumber: "", managerName: "", managerContact: "", expectedOpeningTime: "", expectedStockCheckTime: "" };
@@ -268,7 +268,7 @@ export default function StoresPage() {
                                 {st.name}
                               </span>
                               <div className="flex items-center gap-3">
-                                <span className="text-slate-500 dark:text-slate-400">₹{st.monthlySalary.toLocaleString()}/mo</span>
+                                <span className="text-slate-500 dark:text-slate-400">{formatMoney(st.monthlySalary)}/mo</span>
                                 <button onClick={() => toggleStaffActive(s._id, st)} className="text-xs text-red-500 hover:underline">
                                   {st.active ? "Deactivate" : "Reactivate"}
                                 </button>
