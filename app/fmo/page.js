@@ -3,7 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { todayStr, firstOfMonthStr } from "@/lib/date";
+import { formatMoney } from "@/lib/calc";
 import PageLoader from "@/components/PageLoader";
+import CountUp from "@/components/CountUp";
 
 export default function FmoPage() {
   const [from, setFrom] = useState(firstOfMonthStr());
@@ -65,7 +67,7 @@ export default function FmoPage() {
         <>
           <div className="card mb-4 animate-fade-in bg-gradient-to-br from-brand-500 to-purple-600 text-white border-none">
             <p className="text-sm opacity-90">Total across all stores</p>
-            <p className="text-3xl font-bold mt-1">₹{grandTotal.toLocaleString()}</p>
+            <p className="text-3xl font-bold mt-1"><CountUp value={grandTotal} prefix="₹" decimals={2} /></p>
           </div>
 
           <div className="card mb-4 animate-fade-in">
@@ -91,7 +93,7 @@ export default function FmoPage() {
                     <span className="text-slate-700 dark:text-brand-100 font-medium">{r.store.name}</span>
                     <span className="text-slate-400 dark:text-slate-500"> · {r.count} {r.count === 1 ? "entry" : "entries"}</span>
                   </div>
-                  <span className="font-semibold text-slate-800 dark:text-brand-50">₹{r.total.toLocaleString()}</span>
+                  <span className="font-semibold text-slate-800 dark:text-brand-50">{formatMoney(r.total)}</span>
                 </div>
               ))}
             </div>
