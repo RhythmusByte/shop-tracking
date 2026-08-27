@@ -11,6 +11,10 @@ const TaskSchema = new mongoose.Schema(
     // just a label (e.g. a staff member's name) for tasks delegated verbally/by phone.
     assignedTo: { type: String, default: "" },
     done: { type: Boolean, default: false },
+    // If true, this task's title is re-created fresh (undone) every day it's
+    // missing, rather than being a one-off. See app/todo/page.js for the
+    // regeneration logic.
+    recurring: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
