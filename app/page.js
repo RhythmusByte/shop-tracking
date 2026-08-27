@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { TrendingUp, Wallet, Store as StoreIcon, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
-import { todayStr } from "@/lib/date";
-import { totalSales, openingStatus } from "@/lib/calc";
+import { TrendingUp, Wallet, Store as StoreIcon, CheckCircle2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { todayStr, formatDMY } from "@/lib/date";
+import { totalSales, openingStatus, formatMoney } from "@/lib/calc";
 import PageLoader from "@/components/PageLoader";
 import StatusPill from "@/components/StatusPill";
 import CountUp from "@/components/CountUp";
@@ -72,13 +72,10 @@ export default function DashboardPage() {
   function completeness(entry) {
     if (!entry) return 0;
     const checks = [
-      entry.openingTime,
-      entry.adStartTime,
+      entry.storeClosedToday || entry.openingTime,
       entry.stockInTime,
-      entry.damagesChecked,
-      entry.storeCalled,
-      entry.moneyDeposited,
-      entry.bankStatementChecked,
+      entry.receiptConfirmed,
+      entry.upiCardCrossChecked,
     ];
     const done = checks.filter(Boolean).length;
     return Math.round((done / checks.length) * 100);
@@ -88,6 +85,13 @@ export default function DashboardPage() {
   const todayTotal = entries.reduce((sum, e) => sum + totalSales(e), 0);
   const todayExpense = Object.values(expensesByStore).reduce((a, b) => a + b, 0);
   const storesReporting = entries.length;
+
+  // Stores that haven't logged an opening (and aren't explicitly marked
+  // closed) for the selected date, most relevant when looking at today.
+  const notOpenedYet = stores.filter((store) => {
+    const entry = entryFor(entries, store._id);
+    return openingStatus(store, entry) === "not-logged";
+  });
 
   return (
     <div>
@@ -108,6 +112,7 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      <p className="text-xs text-slate-400 dark:text-slate-500 -mt-3 mb-5">{formatDMY(date)}</p>
 
       {loading ? (
         <PageLoader label="Loading dashboard" />
@@ -120,19 +125,35 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
+          {notOpenedYet.length > 0 && (
+            <div className="card mb-5 animate-fade-in border-amber-300 dark:border-amber-700 bg-amber-50/80 dark:bg-amber-900/20">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                    {notOpenedYet.length} {notOpenedYet.length === 1 ? "store hasn't" : "stores haven't"} logged an opening yet
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                    {notOpenedYet.map((s) => s.name).join(", ")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Hero stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <StatCard
               icon={<TrendingUp size={18} />}
               label="Total sales"
-              value={<CountUp value={todayTotal} prefix="₹" />}
+              value={<CountUp value={todayTotal} prefix="₹" decimals={2} />}
               gradient="from-violet-500 to-purple-600"
               delay={0}
             />
             <StatCard
               icon={<Wallet size={18} />}
               label="Total expenses"
-              value={<CountUp value={todayExpense} prefix="₹" />}
+              value={<CountUp value={todayExpense} prefix="₹" decimals={2} />}
               gradient="from-amber-500 to-orange-600"
               delay={60}
             />
@@ -146,7 +167,7 @@ export default function DashboardPage() {
             <StatCard
               icon={<CheckCircle2 size={18} />}
               label="Previous day sales"
-              value={<CountUp value={prevTotal} prefix="₹" />}
+              value={<CountUp value={prevTotal} prefix="₹" decimals={2} />}
               gradient="from-emerald-500 to-teal-600"
               delay={180}
             />
@@ -188,11 +209,11 @@ export default function DashboardPage() {
                   {entry ? (
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                       <span className="text-slate-500 dark:text-slate-400">Total sales</span>
-                      <span className="text-right font-medium dark:text-brand-50">₹{totalSales(entry).toLocaleString()}</span>
+                      <span className="text-right font-medium dark:text-brand-50">{formatMoney(totalSales(entry))}</span>
                       <span className="text-slate-500 dark:text-slate-400">Expense</span>
-                      <span className="text-right font-medium dark:text-brand-50">₹{expenseTotal.toLocaleString()}</span>
-                      <span className="text-slate-500 dark:text-slate-400">Money deposited</span>
-                      <span className="text-right font-medium dark:text-brand-50">{entry.moneyDeposited ? "Yes" : "No"}</span>
+                      <span className="text-right font-medium dark:text-brand-50">{formatMoney(expenseTotal)}</span>
+                      <span className="text-slate-500 dark:text-slate-400">FMO deposited</span>
+                      <span className="text-right font-medium dark:text-brand-50">{formatMoney(entry.fmoAccount || 0)}</span>
                     </div>
                   ) : (
                     <p className="text-sm text-amber-600 dark:text-amber-400">No entry logged for this date</p>
