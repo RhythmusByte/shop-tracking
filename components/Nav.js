@@ -33,6 +33,7 @@ export default function Nav() {
   const links = [
     ["/", "Dashboard"],
     ["/todo", "Today's TODO"],
+    ["/ads", "Ad Campaign"],
     ["/pnl", "PNL"],
     ["/fmo", "FMO Account"],
     ["/export", "Export"],
