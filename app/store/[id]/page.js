@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { todayStr } from "@/lib/date";
-import { totalSales } from "@/lib/calc";
+import { StickyNote, ChevronDown, ChevronRight, Package, Landmark, Clock, Wallet, ShoppingCart } from "lucide-react";
+import { todayStr, formatDMY } from "@/lib/date";
+import { totalSales, formatMoney } from "@/lib/calc";
 import PageLoader from "@/components/PageLoader";
 
 const EMPTY = {
@@ -13,22 +14,17 @@ const EMPTY = {
   upiSales: 0,
   cardSales: 0,
   creditSales: 0,
-  adStartTime: "",
-  adStartedOnTime: false,
-  adConversions: 0,
   openingTime: "",
+  storeClosedToday: false,
   stockInTime: "",
-  stockInNotes: "",
-  stockLeftChecked: false,
-  stockLeftNotes: "",
-  bankStatementChecked: false,
-  bankCreditedBy12PM: false,
+  stockReceivedKg: 0,
+  damagedKg: 0,
+  wastageKg: 0,
+  stockLeftForTomorrowKg: 0,
+  stockNotes: "",
   fmoAccount: 0,
-  damagesChecked: false,
-  damagesFound: false,
-  damagesNotes: "",
-  storeCalled: false,
-  moneyDeposited: false,
+  receiptConfirmed: false,
+  upiCardCrossChecked: false,
   notes: "",
 };
 
@@ -42,6 +38,7 @@ export default function StoreEntryPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const [purchases, setPurchases] = useState([]);
   const [purchaseForm, setPurchaseForm] = useState({ description: "", amount: "", vendor: "" });
@@ -66,7 +63,9 @@ export default function StoreEntryPage({ params }) {
     const s = (storesRes.stores || []).find((x) => x._id === storeId);
     setStore(s || null);
     const existing = (entryRes.entries || [])[0];
-    setForm(existing ? { ...EMPTY, ...existing } : EMPTY);
+    const nextForm = existing ? { ...EMPTY, ...existing } : EMPTY;
+    setForm(nextForm);
+    setNotesOpen(!!nextForm.notes);
     setPurchases(purchasesRes.purchases || []);
     setExpenses(expensesRes.expenses || []);
     setStaff((staffRes.staff || []).filter((st) => st.active));
@@ -176,14 +175,16 @@ export default function StoreEntryPage({ params }) {
       <h1 className="text-xl font-semibold text-slate-800 dark:text-brand-50 mb-1">
         {store.name} <span className="text-slate-400 dark:text-slate-500 font-normal text-base">({store.code})</span>
       </h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{formatDMY(date)}</p>
+
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-        Sales: <span className="font-semibold text-slate-800 dark:text-brand-50">₹{sales.toLocaleString()}</span>
-        {"  ·  "}Purchases: <span className="font-semibold text-slate-800 dark:text-brand-50">₹{purchaseTotal.toLocaleString()}</span>
-        {"  ·  "}Expenses: <span className="font-semibold text-slate-800 dark:text-brand-50">₹{expenseTotal.toLocaleString()}</span>
+        Sales: <span className="font-semibold text-slate-800 dark:text-brand-50">{formatMoney(sales)}</span>
+        {"  ·  "}Expenses: <span className="font-semibold text-slate-800 dark:text-brand-50">{formatMoney(expenseTotal)}</span>
+        {"  ·  "}Purchases: <span className="font-semibold text-slate-800 dark:text-brand-50">{formatMoney(purchaseTotal)}</span>
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Section title="Order counts">
+        <Section icon={<ShoppingCart size={15} />} title="Order counts">
           <Field label="Online sales (count of orders)">
             <input type="number" className="input" value={form.onlineSalesCount}
               onChange={(e) => set("onlineSalesCount", Number(e.target.value))} />
@@ -197,155 +198,105 @@ export default function StoreEntryPage({ params }) {
           </p>
         </Section>
 
-        <Section title="Sales by payment method (₹)">
+        <Section icon={<Wallet size={15} />} title="Sales by payment method (₹)">
           <Field label="Cash">
-            <input type="number" className="input" value={form.cashSales}
+            <input type="number" step="0.01" className="input" value={form.cashSales}
               onChange={(e) => set("cashSales", Number(e.target.value))} />
           </Field>
           <Field label="UPI">
-            <input type="number" className="input" value={form.upiSales}
+            <input type="number" step="0.01" className="input" value={form.upiSales}
               onChange={(e) => set("upiSales", Number(e.target.value))} />
           </Field>
           <Field label="Card">
-            <input type="number" className="input" value={form.cardSales}
+            <input type="number" step="0.01" className="input" value={form.cardSales}
               onChange={(e) => set("cardSales", Number(e.target.value))} />
           </Field>
           <Field label="Credit">
-            <input type="number" className="input" value={form.creditSales}
+            <input type="number" step="0.01" className="input" value={form.creditSales}
               onChange={(e) => set("creditSales", Number(e.target.value))} />
           </Field>
           <div className="pt-2 border-t border-slate-100 dark:border-[#3a2a52] text-sm font-medium text-slate-700 dark:text-brand-100">
-            Total sale: ₹{sales.toLocaleString()}
+            Total sale: {formatMoney(sales)}
           </div>
         </Section>
 
-        <Section title="Ad Performance (must start 6 AM)">
-          <Field label="Ad start time">
-            <input type="time" className="input" value={form.adStartTime}
-              onChange={(e) => set("adStartTime", e.target.value)} />
-          </Field>
-          <Checkbox label="Started on time (6:00 AM)" checked={form.adStartedOnTime}
-            onChange={(v) => set("adStartedOnTime", v)} />
-          <Field label="Orders converted via ad (count)">
-            <input type="number" className="input" value={form.adConversions}
-              onChange={(e) => set("adConversions", Number(e.target.value))} />
-          </Field>
-        </Section>
-
-        <Section title="Opening Time">
-          <Field label="Store opened at">
-            <input type="time" className="input" value={form.openingTime}
-              onChange={(e) => set("openingTime", e.target.value)} />
-          </Field>
-          {store.expectedOpeningTime && (
+        <Section icon={<Clock size={15} />} title="Opening Time">
+          <Checkbox label="Mark as closed today" checked={form.storeClosedToday}
+            onChange={(v) => set("storeClosedToday", v)} />
+          {!form.storeClosedToday && (
+            <Field label="Store opened at">
+              <input type="time" className="input" value={form.openingTime}
+                onChange={(e) => set("openingTime", e.target.value)} />
+            </Field>
+          )}
+          {store.expectedOpeningTime && !form.storeClosedToday && (
             <p className="text-xs text-slate-400 dark:text-slate-500">Expected: {store.expectedOpeningTime}</p>
           )}
         </Section>
 
-        <Section title="Stock Received">
+        <Section icon={<Package size={15} />} title="Stock">
           <Field label="Stock entered at">
             <input type="time" className="input" value={form.stockInTime}
               onChange={(e) => set("stockInTime", e.target.value)} />
           </Field>
+          <Field label="How much KG received?">
+            <input type="number" step="0.01" className="input" value={form.stockReceivedKg}
+              onChange={(e) => set("stockReceivedKg", Number(e.target.value))} />
+          </Field>
+          <Field label="How much KG got damaged?">
+            <input type="number" step="0.01" className="input" value={form.damagedKg}
+              onChange={(e) => set("damagedKg", Number(e.target.value))} />
+          </Field>
+          <Field label="How much KG marked as wastage?">
+            <input type="number" step="0.01" className="input" value={form.wastageKg}
+              onChange={(e) => set("wastageKg", Number(e.target.value))} />
+          </Field>
+          <Field label="How much stock left for tomorrow (KG)?">
+            <input type="number" step="0.01" className="input" value={form.stockLeftForTomorrowKg}
+              onChange={(e) => set("stockLeftForTomorrowKg", Number(e.target.value))} />
+          </Field>
           <Field label="Notes">
-            <textarea className="input" rows={2} value={form.stockInNotes}
-              onChange={(e) => set("stockInNotes", e.target.value)} />
+            <textarea className="input" rows={2} value={form.stockNotes}
+              onChange={(e) => set("stockNotes", e.target.value)} />
           </Field>
         </Section>
 
-        <Section title="Stock Left (check next morning)">
-          <Checkbox label="Checked this morning" checked={form.stockLeftChecked}
-            onChange={(v) => set("stockLeftChecked", v)} />
-          <Field label="Notes">
-            <textarea className="input" rows={2} value={form.stockLeftNotes}
-              onChange={(e) => set("stockLeftNotes", e.target.value)} />
-          </Field>
-        </Section>
-
-        <Section title="Bank Statement (previous day)">
-          <Checkbox label="Checked bank statement" checked={form.bankStatementChecked}
-            onChange={(v) => set("bankStatementChecked", v)} />
-          <Checkbox label="Credited by 12 PM" checked={form.bankCreditedBy12PM}
-            onChange={(v) => set("bankCreditedBy12PM", v)} />
-          <Field label="FMO account (personal reference)">
-            <input type="number" className="input" value={form.fmoAccount}
+        <Section icon={<Landmark size={15} />} title="Bank Statement">
+          <Field label="Amount deposited to FMO account (₹)">
+            <input type="number" step="0.01" className="input" value={form.fmoAccount}
               onChange={(e) => set("fmoAccount", Number(e.target.value))} />
           </Field>
-        </Section>
-
-        <Section title="Damages">
-          <Checkbox label="Damages checked" checked={form.damagesChecked}
-            onChange={(v) => set("damagesChecked", v)} />
-          <Checkbox label="Damages found" checked={form.damagesFound}
-            onChange={(v) => set("damagesFound", v)} />
-          <Field label="Notes">
-            <textarea className="input" rows={2} value={form.damagesNotes}
-              onChange={(e) => set("damagesNotes", e.target.value)} />
-          </Field>
-        </Section>
-
-        <Section title="Store Call Confirmation">
-          <Checkbox label="Called the store" checked={form.storeCalled}
-            onChange={(v) => set("storeCalled", v)} />
-          <Checkbox label="Money deposited" checked={form.moneyDeposited}
-            onChange={(v) => set("moneyDeposited", v)} />
-        </Section>
-
-        <Section title="Notes">
-          <textarea className="input" rows={3} value={form.notes}
-            onChange={(e) => set("notes", e.target.value)} />
+          <Checkbox label="Confirmed receipt received" checked={form.receiptConfirmed}
+            onChange={(v) => set("receiptConfirmed", v)} />
+          <Checkbox label="Cross-checked UPI/Card payments received correctly" checked={form.upiCardCrossChecked}
+            onChange={(v) => set("upiCardCrossChecked", v)} />
         </Section>
       </div>
 
-      <div className="flex items-center gap-3 mt-6 mb-8">
-        <button onClick={save} disabled={saving} className="btn-primary">
-          {saving ? "Saving..." : "Save entry"}
+      {/* Notes: minimized to an icon by default since it's rarely used. */}
+      <div className="card mt-4">
+        <button
+          onClick={() => setNotesOpen((v) => !v)}
+          className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-brand-100 w-full"
+        >
+          {notesOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          <StickyNote size={15} />
+          Notes
+          {!notesOpen && form.notes && <span className="text-xs font-normal text-slate-400">(has content)</span>}
         </button>
-        {savedAt && <span className="text-xs text-slate-400 dark:text-slate-500">Saved at {savedAt}</span>}
-      </div>
-
-      <div className="card mb-6 animate-fade-in">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">Purchases for {date}</h3>
-        <form onSubmit={addPurchase} className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
-          <input className="input sm:col-span-2" placeholder="Description"
-            value={purchaseForm.description}
-            onChange={(e) => setPurchaseForm((f) => ({ ...f, description: e.target.value }))} />
-          <input className="input" type="number" placeholder="Amount"
-            value={purchaseForm.amount}
-            onChange={(e) => setPurchaseForm((f) => ({ ...f, amount: e.target.value }))} />
-          <div className="flex gap-2">
-            <input className="input" placeholder="Vendor (optional)"
-              value={purchaseForm.vendor}
-              onChange={(e) => setPurchaseForm((f) => ({ ...f, vendor: e.target.value }))} />
-            <button type="submit" disabled={purchaseSaving} className="btn-secondary shrink-0">Add</button>
-          </div>
-        </form>
-
-        {purchases.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">No purchases logged for this date.</p>
-        ) : (
-          <div className="divide-y divide-slate-100 dark:divide-[#3a2a52]">
-            {purchases.map((p) => (
-              <div key={p._id} className="flex items-center justify-between py-2 text-sm">
-                <div>
-                  <span className="text-slate-700 dark:text-brand-100">{p.description}</span>
-                  {p.vendor && <span className="text-slate-400 dark:text-slate-500"> · {p.vendor}</span>}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-medium text-slate-800 dark:text-brand-50">₹{p.amount.toLocaleString()}</span>
-                  <button onClick={() => deletePurchase(p._id)} className="text-red-500 hover:underline text-xs">Remove</button>
-                </div>
-              </div>
-            ))}
-            <div className="flex justify-between pt-2 text-sm font-semibold text-slate-800 dark:text-brand-50">
-              <span>Total</span><span>₹{purchaseTotal.toLocaleString()}</span>
-            </div>
-          </div>
+        {notesOpen && (
+          <textarea
+            className="input mt-3"
+            rows={3}
+            value={form.notes}
+            onChange={(e) => set("notes", e.target.value)}
+            placeholder="Anything else worth noting..."
+          />
         )}
       </div>
 
-      <div className="card animate-fade-in">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">Expenses for {date}</h3>
+      <div className="card mt-4 animate-fade-in">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">Expenses for {formatDMY(date)}</h3>
         <form onSubmit={addExpense} className="space-y-2 mb-4">
           <div className="flex gap-2">
             <select
@@ -364,7 +315,7 @@ export default function StoreEntryPage({ params }) {
               >
                 <option value="">Select staff member</option>
                 {staff.map((s) => (
-                  <option key={s._id} value={s._id}>{s.name} (₹{s.monthlySalary.toLocaleString()}/mo)</option>
+                  <option key={s._id} value={s._id}>{s.name} ({formatMoney(s.monthlySalary)}/mo)</option>
                 ))}
               </select>
             )}
@@ -373,7 +324,7 @@ export default function StoreEntryPage({ params }) {
             <input className="input sm:col-span-2" placeholder="Description"
               value={expenseForm.description}
               onChange={(e) => setExpenseForm((f) => ({ ...f, description: e.target.value }))} />
-            <input className="input" type="number" placeholder="Amount"
+            <input className="input" type="number" step="0.01" placeholder="Amount"
               value={expenseForm.amount}
               onChange={(e) => setExpenseForm((f) => ({ ...f, amount: e.target.value }))} />
             <div className="flex gap-2">
@@ -406,25 +357,75 @@ export default function StoreEntryPage({ params }) {
                   {ex.notes && <span className="text-slate-400 dark:text-slate-500"> · {ex.notes}</span>}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-medium text-slate-800 dark:text-brand-50">₹{ex.amount.toLocaleString()}</span>
+                  <span className="font-medium text-slate-800 dark:text-brand-50">{formatMoney(ex.amount)}</span>
                   <button onClick={() => deleteExpense(ex._id)} className="text-red-500 hover:underline text-xs">Remove</button>
                 </div>
               </div>
             ))}
             <div className="flex justify-between pt-2 text-sm font-semibold text-slate-800 dark:text-brand-50">
-              <span>Total</span><span>₹{expenseTotal.toLocaleString()}</span>
+              <span>Total</span><span>{formatMoney(expenseTotal)}</span>
             </div>
           </div>
         )}
+      </div>
+
+      <div className="card mt-4 animate-fade-in">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">Purchases for {formatDMY(date)}</h3>
+        <form onSubmit={addPurchase} className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
+          <input className="input sm:col-span-2" placeholder="Description"
+            value={purchaseForm.description}
+            onChange={(e) => setPurchaseForm((f) => ({ ...f, description: e.target.value }))} />
+          <input className="input" type="number" step="0.01" placeholder="Amount"
+            value={purchaseForm.amount}
+            onChange={(e) => setPurchaseForm((f) => ({ ...f, amount: e.target.value }))} />
+          <div className="flex gap-2">
+            <input className="input" placeholder="Vendor (optional)"
+              value={purchaseForm.vendor}
+              onChange={(e) => setPurchaseForm((f) => ({ ...f, vendor: e.target.value }))} />
+            <button type="submit" disabled={purchaseSaving} className="btn-secondary shrink-0">Add</button>
+          </div>
+        </form>
+
+        {purchases.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">No purchases logged for this date.</p>
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-[#3a2a52]">
+            {purchases.map((p) => (
+              <div key={p._id} className="flex items-center justify-between py-2 text-sm">
+                <div>
+                  <span className="text-slate-700 dark:text-brand-100">{p.description}</span>
+                  {p.vendor && <span className="text-slate-400 dark:text-slate-500"> · {p.vendor}</span>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-slate-800 dark:text-brand-50">{formatMoney(p.amount)}</span>
+                  <button onClick={() => deletePurchase(p._id)} className="text-red-500 hover:underline text-xs">Remove</button>
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-between pt-2 text-sm font-semibold text-slate-800 dark:text-brand-50">
+              <span>Total</span><span>{formatMoney(purchaseTotal)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 mt-6 mb-8">
+        <button onClick={save} disabled={saving} className="btn-primary">
+          {saving ? "Saving..." : "Save entry"}
+        </button>
+        {savedAt && <span className="text-xs text-slate-400 dark:text-slate-500">Saved at {savedAt}</span>}
       </div>
     </div>
   );
 }
 
-function Section({ title, children }) {
+function Section({ icon, title, children }) {
   return (
     <div className="card animate-fade-in">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3">{title}</h3>
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-brand-100 mb-3 flex items-center gap-2">
+        {icon}
+        {title}
+      </h3>
       <div className="space-y-3">{children}</div>
     </div>
   );
