@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Animates from 0 (or the previous value) to `value` over `duration` ms.
-// `prefix`/`suffix` wrap the formatted number (e.g. prefix="₹").
-export default function CountUp({ value, duration = 700, prefix = "", suffix = "" }) {
+// Animates from the previous value to `value` over `duration` ms.
+// `decimals` controls fixed decimal places (money uses 2, plain counts use 0).
+export default function CountUp({ value, duration = 700, prefix = "", suffix = "", decimals = 0 }) {
   const [display, setDisplay] = useState(0);
   const fromRef = useRef(0);
   const frameRef = useRef(null);
@@ -16,8 +16,7 @@ export default function CountUp({ value, duration = 700, prefix = "", suffix = "
 
     function tick(now) {
       const progress = Math.min((now - start) / duration, 1);
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
       const current = from + (to - from) * eased;
       setDisplay(current);
       if (progress < 1) {
@@ -37,7 +36,7 @@ export default function CountUp({ value, duration = 700, prefix = "", suffix = "
   return (
     <>
       {prefix}
-      {Math.round(display).toLocaleString()}
+      {display.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
       {suffix}
     </>
   );
