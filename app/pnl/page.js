@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { totalSales, categorizeExpense, EXPENSE_CATEGORY_LABEL, EXPENSE_CATEGORY_COLOR } from "@/lib/calc";
-import { todayStr, firstOfMonthStr } from "@/lib/date";
+import { addStyledSheet, downloadWorkbook } from "@/lib/exportSheet";
+import { totalSales, categorizeExpense, EXPENSE_CATEGORY_LABEL, EXPENSE_CATEGORY_COLOR, formatMoney } from "@/lib/calc";
+import { todayStr, firstOfMonthStr, formatDM, formatDMY } from "@/lib/date";
 import CountUp from "@/components/CountUp";
 import PageLoader from "@/components/PageLoader";
 
@@ -95,7 +96,7 @@ export default function PnlPage() {
 
   // Expense category breakdown (Salary is a real field; Petrol/Food/Profit
   // are keyword-matched from the description; everything else is General).
-  const categoryTotals = { salary: 0, petrol: 0, food: 0, profit: 0, general: 0, rent: 0 };
+  const categoryTotals = { salary: 0, petrol: 0, food: 0, profit: 0, general: 0 };
   for (const e of expenses) categoryTotals[categorizeExpense(e)] += e.amount;
   const categoryChartData = Object.entries(categoryTotals)
     .filter(([, amount]) => amount > 0)
@@ -114,7 +115,7 @@ export default function PnlPage() {
   const onlineOfflineData = [...entries]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((e) => ({
-      date: e.date.slice(5),
+      date: formatDM(e.date),
       Online: e.onlineSalesCount || 0,
       Offline: e.offlineSalesCount || 0,
     }));
@@ -133,7 +134,7 @@ export default function PnlPage() {
       const dayPurchase = purchases.filter((p) => p.date === date).reduce((s, p) => s + p.amount, 0);
       const daySales = totalSales(dayEntry);
       return {
-        date: date.slice(5),
+        date: formatDM(date),
         Sales: daySales,
         Expense: dayExpense,
         Purchase: dayPurchase,
@@ -141,39 +142,93 @@ export default function PnlPage() {
       };
     });
 
-  function exportPnl() {
-    const wb = XLSX.utils.book_new();
+  const MONEY_FMT = "₹#,##0.00";
 
-    const summary = [
-      { Metric: "Store", Value: currentStore?.name || "" },
-      { Metric: "Period", Value: `${from} to ${to}` },
-      { Metric: "Total Sales", Value: totalSalesAmt },
-      { Metric: "Total Purchases", Value: totalPurchaseAmt },
-      { Metric: "Total Expenses", Value: totalExpenseAmt },
-      { Metric: "Net Profit / Loss", Value: netProfit },
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Summary");
+  async function exportPnl() {
+    const wb = new ExcelJS.Workbook();
+    const subtitle = `${formatDMY(from)} to ${formatDMY(to)}`;
+    const storeName = currentStore?.name || "Store";
 
-    const categoryRows = Object.entries(categoryTotals).map(([key, amount]) => ({
-      Category: EXPENSE_CATEGORY_LABEL[key], Amount: amount,
-    }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(categoryRows), "Expense Categories");
+    addStyledSheet(wb, {
+      sheetName: "Summary",
+      title: `${storeName} — PNL Summary`,
+      subtitle,
+      columns: [
+        { header: "Metric", key: "metric", width: 24 },
+        { header: "Value", key: "value", width: 18, numFmt: MONEY_FMT },
+      ],
+      rows: [
+        { metric: "Total Sales", value: totalSalesAmt },
+        { metric: "Total Purchases", value: totalPurchaseAmt },
+        { metric: "Total Expenses", value: totalExpenseAmt },
+        { metric: netProfit >= 0 ? "Net Profit" : "Net Loss", value: Math.abs(netProfit) },
+      ],
+    });
+
+    addStyledSheet(wb, {
+      sheetName: "Expense Categories",
+      title: `${storeName} — Expense Categories`,
+      subtitle,
+      columns: [
+        { header: "Category", key: "category", width: 22 },
+        { header: "Amount", key: "amount", width: 16, numFmt: MONEY_FMT },
+      ],
+      rows: Object.entries(categoryTotals)
+        .filter(([, amount]) => amount > 0)
+        .map(([key, amount]) => ({ category: EXPENSE_CATEGORY_LABEL[key], amount })),
+    });
 
     if (salaryRows.length > 0) {
-      const salarySheetRows = salaryRows.map(([name, amount]) => ({ Staff: name, "Salary Paid": amount }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salarySheetRows), "Salary by Staff");
+      addStyledSheet(wb, {
+        sheetName: "Salary by Staff",
+        title: `${storeName} — Salary by Staff`,
+        subtitle,
+        columns: [
+          { header: "Staff", key: "staff", width: 22 },
+          { header: "Salary Paid", key: "amount", width: 16, numFmt: MONEY_FMT },
+        ],
+        rows: salaryRows.map(([name, amount]) => ({ staff: name, amount })),
+      });
     }
 
-    const dailyRows = entries.map((e) => ({ Date: e.date, "Total Sales": totalSales(e) }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailyRows), "Daily Sales");
+    addStyledSheet(wb, {
+      sheetName: "Daily Sales",
+      title: `${storeName} — Daily Sales`,
+      subtitle,
+      columns: [
+        { header: "Date", key: "date", width: 12 },
+        { header: "Total Sales", key: "totalSales", width: 16, numFmt: MONEY_FMT },
+      ],
+      rows: entries.map((e) => ({ date: formatDMY(e.date), totalSales: totalSales(e) })),
+    });
 
-    const expenseRows = expenses.map((e) => ({ Date: e.date, Description: e.description, Amount: e.amount, Notes: e.notes }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows), "Expenses");
+    addStyledSheet(wb, {
+      sheetName: "Expenses",
+      title: `${storeName} — Expenses`,
+      subtitle,
+      columns: [
+        { header: "Date", key: "date", width: 12 },
+        { header: "Description", key: "description", width: 28 },
+        { header: "Amount", key: "amount", width: 14, numFmt: MONEY_FMT },
+        { header: "Notes", key: "notes", width: 24 },
+      ],
+      rows: expenses.map((e) => ({ date: formatDMY(e.date), description: e.description, amount: e.amount, notes: e.notes || "" })),
+    });
 
-    const purchaseRows = purchases.map((p) => ({ Date: p.date, Description: p.description, Vendor: p.vendor, Amount: p.amount }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(purchaseRows), "Purchases");
+    addStyledSheet(wb, {
+      sheetName: "Purchases",
+      title: `${storeName} — Purchases`,
+      subtitle,
+      columns: [
+        { header: "Date", key: "date", width: 12 },
+        { header: "Description", key: "description", width: 28 },
+        { header: "Vendor", key: "vendor", width: 18 },
+        { header: "Amount", key: "amount", width: 14, numFmt: MONEY_FMT },
+      ],
+      rows: purchases.map((p) => ({ date: formatDMY(p.date), description: p.description, vendor: p.vendor || "", amount: p.amount })),
+    });
 
-    XLSX.writeFile(wb, `PNL_${currentStore?.code || "store"}_${from}_to_${to}.xlsx`);
+    await downloadWorkbook(wb, `PNL_${currentStore?.code || "store"}_${from}_to_${to}.xlsx`);
   }
 
   return (
@@ -254,7 +309,7 @@ export default function PnlPage() {
                       <div key={name} className="flex items-center justify-between py-2 text-sm">
                         <span className="text-slate-700 dark:text-brand-100">{name}</span>
                         <span className="font-semibold text-slate-800 dark:text-brand-50">
-                          ₹<CountUp value={amount} />
+                          <CountUp value={amount} prefix="₹" decimals={2} />
                         </span>
                       </div>
                     ))}
@@ -293,7 +348,7 @@ export default function PnlPage() {
                             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: EXPENSE_CATEGORY_COLOR[c.key] }} />
                             {c.name}
                           </span>
-                          <span className="font-medium text-slate-800 dark:text-brand-50">₹{c.value.toLocaleString()}</span>
+                          <span className="font-medium text-slate-800 dark:text-brand-50">{formatMoney(c.value)}</span>
                         </div>
                       ))}
                     </div>
@@ -409,11 +464,11 @@ export default function PnlPage() {
                   {compareData.map((row) => (
                     <div key={row.name} className="grid grid-cols-5 gap-2 py-2 text-sm items-center">
                       <span className="font-medium text-slate-800 dark:text-brand-50">{row.fullName}</span>
-                      <span className="text-right text-slate-600 dark:text-brand-200">₹{row.Sales.toLocaleString()}</span>
-                      <span className="text-right text-slate-600 dark:text-brand-200">₹{row.Expenses.toLocaleString()}</span>
-                      <span className="text-right text-slate-600 dark:text-brand-200">₹{row.Purchases.toLocaleString()}</span>
+                      <span className="text-right text-slate-600 dark:text-brand-200">{formatMoney(row.Sales)}</span>
+                      <span className="text-right text-slate-600 dark:text-brand-200">{formatMoney(row.Expenses)}</span>
+                      <span className="text-right text-slate-600 dark:text-brand-200">{formatMoney(row.Purchases)}</span>
                       <span className={`text-right font-semibold ${row.Net >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                        ₹{row.Net.toLocaleString()}
+                        {formatMoney(row.Net)}
                       </span>
                     </div>
                   ))}
@@ -432,7 +487,7 @@ function Stat({ label, value, color }) {
     <div>
       <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
       <p className={`text-lg font-semibold ${color}`}>
-        ₹<CountUp value={value} />
+        <CountUp value={value} prefix="₹" decimals={2} />
       </p>
     </div>
   );
