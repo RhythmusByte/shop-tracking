@@ -1,61 +1,83 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { addStyledSheet, downloadWorkbook } from "@/lib/exportSheet";
 import { totalSales } from "@/lib/calc";
-import { todayStr, firstOfMonthStr } from "@/lib/date";
+import { todayStr, firstOfMonthStr, formatDMY } from "@/lib/date";
 
-function firstOfMonth() {
-  return firstOfMonthStr();
-}
+const MONEY_FMT = "₹#,##0.00";
+const KG_FMT = "0.00 \"kg\"";
 
 const COLUMNS = [
-  ["date", "Date"],
-  ["storeName", "Store"],
-  ["storeCode", "Code"],
-  ["onlineSalesCount", "Online Orders (count)"],
-  ["offlineSalesCount", "Offline Orders (count)"],
-  ["cashSales", "Cash"],
-  ["upiSales", "UPI"],
-  ["cardSales", "Card"],
-  ["creditSales", "Credit"],
-  ["totalSale", "Total Sale"],
-  ["adStartTime", "Ad Start Time"],
-  ["adStartedOnTime", "Ad On Time (6AM)"],
-  ["adConversions", "Ad Conversions (count)"],
-  ["openingTime", "Opening Time"],
-  ["stockInTime", "Stock In Time"],
-  ["stockInNotes", "Stock In Notes"],
-  ["stockLeftChecked", "Stock Left Checked"],
-  ["stockLeftNotes", "Stock Left Notes"],
-  ["bankStatementChecked", "Bank Statement Checked"],
-  ["bankCreditedBy12PM", "Credited By 12PM"],
-  ["fmoAccount", "FMO Account (ref)"],
-  ["damagesChecked", "Damages Checked"],
-  ["damagesFound", "Damages Found"],
-  ["damagesNotes", "Damages Notes"],
-  ["storeCalled", "Store Called"],
-  ["moneyDeposited", "Money Deposited"],
-  ["notes", "Notes"],
+  { header: "Date", key: "date", width: 12 },
+  { header: "Store", key: "storeName", width: 22 },
+  { header: "Code", key: "storeCode", width: 8 },
+  { header: "Online Orders", key: "onlineSalesCount", width: 12 },
+  { header: "Offline Orders", key: "offlineSalesCount", width: 12 },
+  { header: "Cash", key: "cashSales", width: 12, numFmt: MONEY_FMT },
+  { header: "UPI", key: "upiSales", width: 12, numFmt: MONEY_FMT },
+  { header: "Card", key: "cardSales", width: 12, numFmt: MONEY_FMT },
+  { header: "Credit", key: "creditSales", width: 12, numFmt: MONEY_FMT },
+  { header: "Total Sale", key: "totalSale", width: 14, numFmt: MONEY_FMT },
+  { header: "Opening", key: "openingStatus", width: 14 },
+  { header: "Stock In Time", key: "stockInTime", width: 12 },
+  { header: "Received (kg)", key: "stockReceivedKg", width: 13, numFmt: KG_FMT },
+  { header: "Damaged (kg)", key: "damagedKg", width: 13, numFmt: KG_FMT },
+  { header: "Wastage (kg)", key: "wastageKg", width: 13, numFmt: KG_FMT },
+  { header: "Left for Tomorrow (kg)", key: "stockLeftForTomorrowKg", width: 16, numFmt: KG_FMT },
+  { header: "FMO Deposited", key: "fmoAccount", width: 14, numFmt: MONEY_FMT },
+  { header: "Receipt Confirmed", key: "receiptConfirmed", width: 15 },
+  { header: "UPI/Card Cross-Checked", key: "upiCardCrossChecked", width: 18 },
+  { header: "Notes", key: "notes", width: 30 },
 ];
 
 function toRow(entry) {
-  const row = {};
-  for (const [key, label] of COLUMNS) {
-    let value;
-    if (key === "storeName") value = entry.store?.name ?? "";
-    else if (key === "storeCode") value = entry.store?.code ?? "";
-    else if (key === "totalSale") value = totalSales(entry);
-    else value = entry[key];
-    if (typeof value === "boolean") value = value ? "Yes" : "No";
-    row[label] = value ?? "";
-  }
-  return row;
+  return {
+    date: formatDMY(entry.date),
+    storeName: entry.store?.name ?? "",
+    storeCode: entry.store?.code ?? "",
+    onlineSalesCount: entry.onlineSalesCount || 0,
+    offlineSalesCount: entry.offlineSalesCount || 0,
+    cashSales: entry.cashSales || 0,
+    upiSales: entry.upiSales || 0,
+    cardSales: entry.cardSales || 0,
+    creditSales: entry.creditSales || 0,
+    totalSale: totalSales(entry),
+    openingStatus: entry.storeClosedToday ? "Closed" : entry.openingTime || "Not logged",
+    stockInTime: entry.stockInTime || "",
+    stockReceivedKg: entry.stockReceivedKg || 0,
+    damagedKg: entry.damagedKg || 0,
+    wastageKg: entry.wastageKg || 0,
+    stockLeftForTomorrowKg: entry.stockLeftForTomorrowKg || 0,
+    fmoAccount: entry.fmoAccount || 0,
+    receiptConfirmed: entry.receiptConfirmed ? "Yes" : "No",
+    upiCardCrossChecked: entry.upiCardCrossChecked ? "Yes" : "No",
+    notes: entry.notes || "",
+  };
+}
+
+const EXPENSE_COLUMNS = [
+  { header: "Date", key: "date", width: 12 },
+  { header: "Store", key: "storeName", width: 22 },
+  { header: "Description", key: "description", width: 28 },
+  { header: "Amount", key: "amount", width: 14, numFmt: MONEY_FMT },
+  { header: "Notes", key: "notes", width: 24 },
+];
+
+function expenseRow(e) {
+  return {
+    date: formatDMY(e.date),
+    storeName: e.store?.name ?? "",
+    description: e.description,
+    amount: e.amount,
+    notes: e.notes || "",
+  };
 }
 
 export default function ExportPage() {
   const [stores, setStores] = useState([]);
-  const [from, setFrom] = useState(firstOfMonth());
+  const [from, setFrom] = useState(firstOfMonthStr());
   const [to, setTo] = useState(todayStr());
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -78,25 +100,28 @@ export default function ExportPage() {
     return res.expenses || [];
   }
 
-  function expenseRows(expenses) {
-    return expenses.map((e) => ({
-      Date: e.date,
-      Store: e.store?.name ?? "",
-      Description: e.description,
-      Amount: e.amount,
-      Notes: e.notes,
-    }));
-  }
-
   async function exportAllStoresCombined() {
     setBusy(true);
     setMessage("");
     try {
       const [entries, expenses] = await Promise.all([fetchEntries(), fetchExpenses()]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(entries.map(toRow)), "All Stores");
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows(expenses)), "Expenses");
-      XLSX.writeFile(wb, `all-stores_${from}_to_${to}.xlsx`);
+      const wb = new ExcelJS.Workbook();
+      const subtitle = `${formatDMY(from)} to ${formatDMY(to)}`;
+      addStyledSheet(wb, {
+        sheetName: "All Stores",
+        title: "Store Tracker — All Stores Daily Report",
+        subtitle,
+        columns: COLUMNS,
+        rows: entries.map(toRow),
+      });
+      addStyledSheet(wb, {
+        sheetName: "Expenses",
+        title: "Store Tracker — Expenses",
+        subtitle,
+        columns: EXPENSE_COLUMNS,
+        rows: expenses.map(expenseRow),
+      });
+      await downloadWorkbook(wb, `all-stores_${from}_to_${to}.xlsx`);
     } finally {
       setBusy(false);
     }
@@ -106,28 +131,46 @@ export default function ExportPage() {
     setBusy(true);
     setMessage("");
     try {
-      const wb = XLSX.utils.book_new();
+      const wb = new ExcelJS.Workbook();
+      const subtitle = `${formatDMY(from)} to ${formatDMY(to)}`;
       for (const store of stores) {
         const entries = await fetchEntries(store._id);
-        const ws = XLSX.utils.json_to_sheet(entries.map(toRow));
-        // Sheet names are capped at 31 chars by the xlsx format.
-        XLSX.utils.book_append_sheet(wb, ws, store.code.slice(0, 31));
+        addStyledSheet(wb, {
+          sheetName: store.code,
+          title: `${store.name} — Daily Report`,
+          subtitle,
+          columns: COLUMNS,
+          rows: entries.map(toRow),
+        });
       }
-      XLSX.writeFile(wb, `by-store_${from}_to_${to}.xlsx`);
+      await downloadWorkbook(wb, `by-store_${from}_to_${to}.xlsx`);
     } finally {
       setBusy(false);
     }
   }
 
-  async function exportSingleStore(storeId, storeCode) {
+  async function exportSingleStore(storeId, storeCode, storeName) {
     setBusy(true);
     setMessage("");
     try {
-      const entries = await fetchEntries(storeId);
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(entries.map(toRow));
-      XLSX.utils.book_append_sheet(wb, ws, storeCode.slice(0, 31));
-      XLSX.writeFile(wb, `${storeCode}_${from}_to_${to}.xlsx`);
+      const [entries, expenses] = await Promise.all([fetchEntries(storeId), fetchExpenses(storeId)]);
+      const wb = new ExcelJS.Workbook();
+      const subtitle = `${formatDMY(from)} to ${formatDMY(to)}`;
+      addStyledSheet(wb, {
+        sheetName: storeCode,
+        title: `${storeName} — Daily Report`,
+        subtitle,
+        columns: COLUMNS,
+        rows: entries.map(toRow),
+      });
+      addStyledSheet(wb, {
+        sheetName: "Expenses",
+        title: `${storeName} — Expenses`,
+        subtitle,
+        columns: EXPENSE_COLUMNS,
+        rows: expenses.map(expenseRow),
+      });
+      await downloadWorkbook(wb, `${storeCode}_${from}_to_${to}.xlsx`);
     } finally {
       setBusy(false);
     }
@@ -166,7 +209,7 @@ export default function ExportPage() {
             <div key={s._id} className="flex items-center justify-between">
               <span className="text-sm text-slate-700 dark:text-brand-100">{s.name} ({s.code})</span>
               <button
-                onClick={() => exportSingleStore(s._id, s.code)}
+                onClick={() => exportSingleStore(s._id, s.code, s.name)}
                 disabled={busy}
                 className="text-sm text-brand-600 dark:text-brand-300 hover:underline"
               >
