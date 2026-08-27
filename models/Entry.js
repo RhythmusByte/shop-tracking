@@ -9,43 +9,30 @@ const EntrySchema = new mongoose.Schema(
     onlineSalesCount: { type: Number, default: 0 },
     offlineSalesCount: { type: Number, default: 0 },
 
-    // Sales amounts, broken down by payment method. This is what "Total Sale" sums.
+    // Sales amounts, broken down by payment method. totalSales() sums these.
     cashSales: { type: Number, default: 0 },
     upiSales: { type: Number, default: 0 },
     cardSales: { type: Number, default: 0 },
     creditSales: { type: Number, default: 0 },
 
-    // Ads (must start at 6 AM). adConversions is a COUNT of orders attributed to the
-    // ad, not a currency amount.
-    adStartTime: { type: String, default: "" }, // "HH:MM"
-    adStartedOnTime: { type: Boolean, default: false },
-    adConversions: { type: Number, default: 0 },
-
     // Opening
     openingTime: { type: String, default: "" }, // "HH:MM"
+    storeClosedToday: { type: Boolean, default: false },
 
-    // Stock in
+    // Stock: received, damaged, wasted, and left over, all in KG, plus
+    // free-text notes. Merges what used to be three separate sections
+    // (stock received / stock left / damages) into one.
     stockInTime: { type: String, default: "" },
-    stockInNotes: { type: String, default: "" },
+    stockReceivedKg: { type: Number, default: 0 },
+    damagedKg: { type: Number, default: 0 },
+    wastageKg: { type: Number, default: 0 },
+    stockLeftForTomorrowKg: { type: Number, default: 0 },
+    stockNotes: { type: String, default: "" },
 
-    // Stock left (checked the following morning)
-    stockLeftChecked: { type: Boolean, default: false },
-    stockLeftNotes: { type: String, default: "" },
-
-    // Bank statement / deposit
-    bankStatementChecked: { type: Boolean, default: false },
-    bankCreditedBy12PM: { type: Boolean, default: false },
-    // Personal-reference figure, not part of any sales/expense total.
-    fmoAccount: { type: Number, default: 0 },
-
-    // Damages
-    damagesChecked: { type: Boolean, default: false },
-    damagesFound: { type: Boolean, default: false },
-    damagesNotes: { type: String, default: "" },
-
-    // Store call confirmation
-    storeCalled: { type: Boolean, default: false },
-    moneyDeposited: { type: Boolean, default: false },
+    // Bank / FMO
+    fmoAccount: { type: Number, default: 0 }, // amount deposited to the FMO account
+    receiptConfirmed: { type: Boolean, default: false }, // receipt received, confirmed
+    upiCardCrossChecked: { type: Boolean, default: false }, // UPI/card payments cross-checked
 
     notes: { type: String, default: "" },
   },
